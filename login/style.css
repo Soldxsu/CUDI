@@ -1,0 +1,22 @@
+
+.formulario{
+    justify-content: center;
+    justify-items: center;
+    padding: 0px;
+    position: relative;
+    top: 100px;
+}
+.formulario h1{
+    margin: 30px;
+    color: aliceblue;
+}
+
+.formulario input{
+    border: none;
+    border-radius: 20px;
+    height: 30px;
+}
+
+body{
+    background-color: #443BE4;
+}
