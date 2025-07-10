@@ -64,6 +64,8 @@ $itinerarios_options = $conn->query("SELECT id_itinerario, horario FROM itinerar
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $form_title; ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
     <link rel="stylesheet" href="css/añadir.css">
 </head>
 <body>
@@ -129,6 +131,41 @@ $itinerarios_options = $conn->query("SELECT id_itinerario, horario FROM itinerar
         </form>
         <a href="index.php" class="back-button">Volver al Listado</a>
     </div>
-    <?php $conn->close(); ?>
+    <?php $conn->close();
+    ?>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script>
+    $(document).ready(function() {
+        $('#materia_id').select2({
+        placeholder: "Seleccione una materia",
+        width: '100%'
+        });
+    });
+    $(document).ready(function() {
+        $('#jornada_id').select2({
+        placeholder: "Seleccione una jornada",
+        width: '100%'
+        });
+    });
+
+    $(document).ready(function() {
+        $('#itinerario_id').select2({
+        placeholder: "Seleccione un horario",
+        width: '100%'
+        });
+    });
+
+    $(document).ready(function() {
+        $('#aula_id').select2({
+        placeholder: "Seleccione un aula",
+        width: '100%'
+        });
+    });
+    </script>
+
+
 </body>
 </html>
