@@ -1,15 +1,23 @@
 <?php
-session_start(); 
-require 'conexion.php';
-define('ADMIN_USER', 'bedel');
-define('ADMIN_PASS', '123');
+session_start();
+include 'conexion.php';
+
+
+if (isset($_SESSION['usuario'])) {
+    header('Location: index.php');
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'] ?? '';
-    $password = $_POST['password'] ?? '';
+    $username = $conn->real_escape_string($_POST['username'] ?? '');
+    $password = $conn->real_escape_string($_POST['password'] ?? '');
 
-    if ($username === ADMIN_USER && $password === ADMIN_PASS) {
-        header('Location: disponibilidad.php');
+    $sql = "SELECT * FROM usuarios WHERE nombre_usuario = '$username' AND contrasena = '$password'";
+    $result = $conn->query($sql);
+
+    if ($result && $result->num_rows === 1) {
+        $_SESSION['usuario'] = $username;
+        header('Location: index.php');
         exit;
     } else {
         $error = 'Credenciales inválidas.';
@@ -18,27 +26,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Inicio de Sesión</title>
     <style>
-        body{
+        body {
             background: linear-gradient(to right, #3B6CDC, #6BD4E2);
             justify-content: center;
             justify-items: center;
             font-family: 'Josefin Sans';
         }
 
-        img{
+        img {
             position: relative;
             width: 190px;
             height: 135px;
             margin-top: 20px;
         }
 
-        .formulario{
+        .formulario {
             background-color: white;
             border-radius: 8px;
             width: 486px;
@@ -51,11 +59,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             grid-template-columns: repeat(auto-fit, 1fr);
         }
 
-        .label{
+        .label {
             color: rgb(0, 0, 0);
         }
 
-        .input{
+        .input {
             border-radius: 4px;
             width: 450px;
             height: 30px;
@@ -64,13 +72,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border: 1px solid;
         }
 
-        .h1{
+        .h1 {
             font-style: 'Josefin Sans';
             color: white;
             font-size: 50px;
         }
 
-        #enviar{
+        #enviar {
             background-color: #2a5ed6;
             width: 458px;
             position: relative;
@@ -84,24 +92,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-   <img src="img/logo.png" alt="logo">
-   <h1 class="h1">Inicio de Sesión</h1>
-   <?php if (!empty($error)) echo "<h3 style='color:red;'>$error</h3>"; ?>
+    <img src="img/logo.png" alt="logo">
+    <h1 class="h1">Inicio de Sesión</h1>
+    <?php if (!empty($error)) echo "<h3 style='color:red;'>$error</h3>"; ?>
     <div class="formulario">
-        <form action="index.php" method="post" >
+        <form action="login.php" method="post">
             <br>
             <label class="label">Usuario</label>
             <br>
-            <input class="input" type="text" name="username" placeholder="Valor">
-            <br>
-            <br> 
-            <br>
+            <input class="input" type="text" name="username" placeholder="Valor" required>
+            <br><br><br>
             <label class="label">Contraseña</label>
-            <br> 
-            <input class="input" type="password"  name="password" placeholder="Valor">
             <br>
-            <input id="enviar" type="submit" placeholder="iniciar Sesión"> 
+            <input class="input" type="password" name="password" placeholder="Valor" required>
+            <br>
+            <input id="enviar" type="submit" value="Iniciar Sesión">
         </form>
-    </div>    
+    </div>
 </body>
 </html>
