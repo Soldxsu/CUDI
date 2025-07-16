@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 09-06-2025 a las 19:11:09
+-- Tiempo de generación: 12-06-2025 a las 18:35:27
 -- Versión del servidor: 10.4.28-MariaDB
 -- Versión de PHP: 8.1.17
 
@@ -67,24 +67,25 @@ INSERT INTO `aulas` (`id_aula`, `piso`, `cantidad`, `numero`) VALUES
 
 CREATE TABLE `carreras` (
   `id_carrera` int(11) NOT NULL,
-  `nombre` varchar(80) NOT NULL
+  `nombre` varchar(80) NOT NULL,
+  `universidad_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_spanish2_ci;
 
 --
 -- Volcado de datos para la tabla `carreras`
 --
 
-INSERT INTO `carreras` (`id_carrera`, `nombre`) VALUES
-(2, 'Tecnicatura Universitaria en Tecnología de los Alimentos'),
-(3, 'Tecnicatura Universitaria en Biotecnología'),
-(4, 'Tecnicatura Universitaria en Diseño Industrial'),
-(5, 'Tecnicatura Universitaria en Programación'),
-(6, 'Tecnicatura Universitaria en Producción de Videojuegos'),
-(7, 'Enfermería Universitaria'),
-(8, 'Licenciatura en Obstetricia'),
-(9, 'Diplomatura en Diseño e Impresión 3D'),
-(10, 'Diplomatura Inteligencia Artificial'),
-(11, 'Diplomatura Desarrollo Web');
+INSERT INTO `carreras` (`id_carrera`, `nombre`, `universidad_id`) VALUES
+(2, 'Tecnicatura Universitaria en Tecnología de los Alimentos', 3),
+(3, 'Tecnicatura Universitaria en Biotecnología', 2),
+(4, 'Tecnicatura Universitaria en Diseño Industrial', 3),
+(5, 'Tecnicatura Universitaria en Programación', 4),
+(6, 'Tecnicatura Universitaria en Producción de Videojuegos', 6),
+(7, 'Enfermería Universitaria', 5),
+(8, 'Licenciatura en Obstetricia', 3),
+(11, 'Diplomatura Desarrollo Web', 5),
+(12, 'Diplomatura en Programación y Análisis de datos', 5),
+(13, 'Diplomatura en Gestión de TIC para PyMEs', 5);
 
 -- --------------------------------------------------------
 
@@ -105,7 +106,8 @@ INSERT INTO `cursos_pre_admisiones` (`id_curso_pre_admision`, `nombre_curso`) VA
 (3, 'Ciclo Introductorio (UNQUI)'),
 (4, 'Curso de Preparación Universitaria (UNAHUR)'),
 (5, 'Ciclo de Inicio Universitario (UNPAZ)'),
-(6, 'Ciclo Básico Común (UBA)');
+(6, 'Ciclo Básico Común (UBA)'),
+(7, 'Curso de Preparación Universitaria (UTN)');
 
 -- --------------------------------------------------------
 
@@ -129,15 +131,16 @@ CREATE TABLE `dias` (
 
 CREATE TABLE `itinerario` (
   `id_itinerario` int(11) NOT NULL,
-  `horario` time NOT NULL
+  `hora_inicio` time NOT NULL,
+  `hora_fin` time NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_spanish2_ci;
 
 --
 -- Volcado de datos para la tabla `itinerario`
 --
 
-INSERT INTO `itinerario` (`id_itinerario`, `horario`) VALUES
-(1, '01:00:00');
+INSERT INTO `itinerario` (`id_itinerario`, `hora_inicio`, `hora_fin`) VALUES
+(1, '01:00:00', '02:00:00');
 
 -- --------------------------------------------------------
 
@@ -372,33 +375,24 @@ INSERT INTO `materias` (`id_materia`, `nombre`, `carrera_id`, `curso_pre_admisio
 (188, 'Puericultura', 8, NULL, 1),
 (189, 'Taller de investigación II', 8, NULL, 1),
 (190, 'Práctica obstétrica integrada II', 8, NULL, 1),
-(191, 'Introducción al Diseño y Modelado 3D', 9, NULL, 1),
-(192, 'Modelado 3D (protrusión y revolución)', 9, NULL, 1),
-(193, 'Aplicaciones de modelado 3D', 9, NULL, 1),
-(194, 'Definición de propiedades de las piezas modeladas', 9, NULL, 1),
-(195, 'Modelado de conjuntos. E', 9, NULL, 1),
-(196, 'Aplicación de movimientos', 9, NULL, 1),
-(197, 'Introducción a los sistemas de modelado en 3D', 9, NULL, 1),
-(198, 'Impresoras de metales y moldes', 9, NULL, 1),
-(199, 'Introducción a la Programación con Python', 10, NULL, 1),
-(200, 'Estructuras de Datos', 10, NULL, 1),
-(201, 'Sentencias de control de flujo y funciones', 10, NULL, 1),
-(202, 'Programación orientada a objetos', 10, NULL, 1),
-(203, 'Análisis exploratorio, curación y visualización de', 10, NULL, 1),
-(204, 'Análisis exploratorio, curación y visualización de', 10, NULL, 1),
-(205, 'Aprendizaje automático, Regresión', 10, NULL, 1),
-(206, 'Aprendizaje automático, Clasificación', 10, NULL, 1),
-(207, 'Árboles de decisión', 10, NULL, 1),
-(208, 'Support Vector Machines', 10, NULL, 1),
-(209, 'Redes neuronales I', 10, NULL, 1),
-(210, 'Redes neuronales II', 10, NULL, 1),
 (211, 'Introducción al Desarrollo Frontend con React', 11, NULL, 1),
 (212, 'Introducción al Desarrollo Backend con Nodejs', 11, NULL, 1),
 (213, 'Diseño UX', 11, NULL, 1),
 (214, 'Proyecto Final de Desarrollo Web', 11, NULL, 1),
 (215, 'Lectura y Escritura Académica', NULL, 3, 1),
 (216, 'Matemática', NULL, 3, 1),
-(217, 'Introducción al Conocimiento de la Física y la Química', NULL, 3, 1);
+(217, 'Introducción al Conocimiento de la Física y la Química', NULL, 3, 1),
+(218, 'Pensamiento Matemático', NULL, 4, 1),
+(219, 'Lectura y Escritura', NULL, 4, 1),
+(220, 'Vida Universitaria', NULL, 4, 1),
+(221, 'Programación Inicial', NULL, 7, 1),
+(222, 'Matemática Inicial', NULL, 7, 1),
+(223, 'Lectura Comprensiva', NULL, 7, 1),
+(224, 'Matemática ', NULL, 5, 1),
+(225, 'Lectura y Escritura', NULL, 5, 1),
+(226, 'Sociedad y Vida universitaria', NULL, 5, 1),
+(227, 'Introducción al Pensamiento Científico (IPC)', NULL, 6, 1),
+(228, 'Introducción al Conocimiento de la Sociedad y el Estado (ICSE)', NULL, 6, 1);
 
 -- --------------------------------------------------------
 
@@ -431,7 +425,6 @@ CREATE TABLE `universidades` (
   `id_universidad` int(11) NOT NULL,
   `nombre` varchar(50) NOT NULL,
   `acronimo` varchar(6) NOT NULL,
-  `carrera_id` int(11) NOT NULL,
   `curso_pre_admision_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_spanish2_ci;
 
@@ -439,8 +432,12 @@ CREATE TABLE `universidades` (
 -- Volcado de datos para la tabla `universidades`
 --
 
-INSERT INTO `universidades` (`id_universidad`, `nombre`, `acronimo`, `carrera_id`, `curso_pre_admision_id`) VALUES
-(1, 'Universidad Nacional de Quilmes', 'UNQUI', 3, 3);
+INSERT INTO `universidades` (`id_universidad`, `nombre`, `acronimo`, `curso_pre_admision_id`) VALUES
+(2, 'Universidad Nacional de Quilmes', 'UNQUI', 3),
+(3, 'Universidad Nacional de Hurlingham', 'UNAHUR', 4),
+(4, 'Universidad Tecnológica Nacional', 'UTN', 7),
+(5, 'Universidad de Buenos Aires', 'UBA', 6),
+(6, 'Universidad Nacional de José C. Paz', 'UNPAZ', 5);
 
 -- --------------------------------------------------------
 
@@ -475,7 +472,8 @@ ALTER TABLE `aulas`
 -- Indices de la tabla `carreras`
 --
 ALTER TABLE `carreras`
-  ADD PRIMARY KEY (`id_carrera`);
+  ADD PRIMARY KEY (`id_carrera`),
+  ADD KEY `universidad_id` (`universidad_id`);
 
 --
 -- Indices de la tabla `cursos_pre_admisiones`
@@ -525,7 +523,6 @@ ALTER TABLE `profesores`
 --
 ALTER TABLE `universidades`
   ADD PRIMARY KEY (`id_universidad`),
-  ADD KEY `carrera_id` (`carrera_id`),
   ADD KEY `curso_pre_admision_id` (`curso_pre_admision_id`);
 
 --
@@ -548,13 +545,13 @@ ALTER TABLE `aulas`
 -- AUTO_INCREMENT de la tabla `carreras`
 --
 ALTER TABLE `carreras`
-  MODIFY `id_carrera` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id_carrera` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT de la tabla `cursos_pre_admisiones`
 --
 ALTER TABLE `cursos_pre_admisiones`
-  MODIFY `id_curso_pre_admision` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_curso_pre_admision` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT de la tabla `dias`
@@ -578,7 +575,7 @@ ALTER TABLE `jornada`
 -- AUTO_INCREMENT de la tabla `materias`
 --
 ALTER TABLE `materias`
-  MODIFY `id_materia` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=218;
+  MODIFY `id_materia` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=229;
 
 --
 -- AUTO_INCREMENT de la tabla `profesores`
@@ -590,7 +587,7 @@ ALTER TABLE `profesores`
 -- AUTO_INCREMENT de la tabla `universidades`
 --
 ALTER TABLE `universidades`
-  MODIFY `id_universidad` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id_universidad` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT de la tabla `usuarios`
@@ -601,6 +598,12 @@ ALTER TABLE `usuarios`
 --
 -- Restricciones para tablas volcadas
 --
+
+--
+-- Filtros para la tabla `carreras`
+--
+ALTER TABLE `carreras`
+  ADD CONSTRAINT `carreras_ibfk_1` FOREIGN KEY (`universidad_id`) REFERENCES `universidades` (`id_universidad`);
 
 --
 -- Filtros para la tabla `dias`
@@ -623,7 +626,6 @@ ALTER TABLE `materias`
 -- Filtros para la tabla `universidades`
 --
 ALTER TABLE `universidades`
-  ADD CONSTRAINT `universidades_ibfk_1` FOREIGN KEY (`carrera_id`) REFERENCES `carreras` (`id_carrera`),
   ADD CONSTRAINT `universidades_ibfk_2` FOREIGN KEY (`curso_pre_admision_id`) REFERENCES `cursos_pre_admisiones` (`id_curso_pre_admision`);
 COMMIT;
 

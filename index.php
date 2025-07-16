@@ -1,13 +1,13 @@
 <?php
 include 'conexion.php'; 
 
-$sql_dias = "SELECT d.id_dia, j.dias AS jornada_nombre, i.horario, m.nombre AS materia_nombre, a.numero AS aula_numero
+$sql_dias = "SELECT d.id_dia, j.dias AS jornada_nombre, CONCAT(i.hora_inicio, ' - ', i.hora_fin) AS horario, m.nombre AS materia_nombre, a.numero AS aula_numero
              FROM dias d
              LEFT JOIN jornada j ON d.jornada_id = j.id_jornada 
              LEFT JOIN itinerario i ON d.itinerario_id = i.id_itinerario
              LEFT JOIN materias m ON d.materia_id = m.id_materia
              LEFT JOIN aulas a ON d.aula_id = a.id_aula
-             ORDER BY j.dias, i.horario";
+             ORDER BY j.dias, i.hora_inicio, i.hora_fin";
 $result_dias = $conn->query($sql_dias);
 ?>
 
@@ -175,7 +175,7 @@ $result_dias = $conn->query($sql_dias);
                         <?php while($row = $result_dias->fetch_assoc()): ?>
                             <tr>
                                 <td><?php echo $row['jornada_nombre']; ?></td>
-                                <td><?php echo date('H:i', strtotime($row['horario'])); ?></td>
+                                <td><?php echo $row['horario']; ?></td>
                                 <td><?php echo $row['materia_nombre']; ?></td>
                                 <td><?php echo $row['aula_numero']; ?></td>
                             </tr>

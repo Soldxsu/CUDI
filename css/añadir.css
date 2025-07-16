@@ -1,63 +1,66 @@
 body {
-    font-family: Arial, sans-serif; margin: 20px; 
+  font-family: Arial, sans-serif;
+  margin: 20px;
 }
 
-.form-container { 
-    background-color: #f9f9f9; 
-    padding: 20px;
-    background-color: #A0B9F3; 
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    max-width: 500px;
-    margin: 20px auto; 
+.form-container {
+  background-color: #f9f9f9;
+  padding: 20px;
+  background-color: #a0b9f3;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  max-width: 800px;
+  margin: 20px auto;
 }
 
-.form-group { 
-    margin-bottom: 25px; 
+.form-group {
+  margin-bottom: 25px;
 }
 
-.form-group label { 
-    display: block; 
-    margin-bottom: 5px;
-    font-weight: semi-bold; 
-    }
-
-.form-group select, .form-group input[type="text"] { 
-    width: 100%; 
-    padding: 8px; 
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-sizing: border-box; 
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: semi-bold;
 }
 
-.form-group button { 
-    background: linear-gradient(to right, #3B6CDC, #6BD4E2);
-    color: white;
-    width: 100%; 
-    padding: 10px 15px; 
-    border: none; 
-    border-radius: 5px; 
-    cursor: pointer;
-    font-size: 16px; 
+.form-group select,
+.form-group input[type="text"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
 }
 
-.back-button { 
-    margin-top: 5px; 
-    display: inline-block; 
-    padding: 10px 15px; 
-    background-color: #6c757d; 
-    color: white;
-    width: 350px;
-    text-align: center;
-    text-decoration: none; border-radius: 5px; 
+.form-group button {
+  background: linear-gradient(to right, #3b6cdc, #6bd4e2);
+  color: white;
+  width: 100%;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
 }
 
-.form-group button:hover{
-    background: #3B6CDC;
-    transition: 150ms;
+.back-button {
+  margin-top: 5px;
+  display: inline-block;
+  padding: 10px 15px;
+  background-color: #6c757d;
+  color: white;
+  width: 350px;
+  text-align: center;
+  text-decoration: none;
+  border-radius: 5px;
 }
 
-.back-button:hover { 
-    background-color: #4F5568;
-    transition: 150ms; 
+.form-group button:hover {
+  background: #3b6cdc;
+  transition: 150ms;
+}
+
+.back-button:hover {
+  background-color: #4f5568;
+  transition: 150ms;
 }
