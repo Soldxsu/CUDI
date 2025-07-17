@@ -232,7 +232,7 @@ $itinerarios_options= $conn->query("SELECT id_itinerario, hora_inicio FROM itine
             <option value="">Seleccione un horario</option>
             <?php while ($row = $itinerarios_options->fetch_assoc()): ?>
               <option value="<?php echo $row['id_itinerario']; ?>" <?php echo ($itinerario_id == $row['id_itinerario']) ? 'selected' : ''; ?>>
-                <?php echo htmlspecialchars($row['horario']); ?>
+                <?php echo htmlspecialchars($row['hora_inicio']); ?>
               </option>
             <?php endwhile; ?>
           </select>
