@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 $jornada_options    = $conn->query("SELECT id_jornada, dias FROM jornada");
 $aulas_options      = $conn->query("SELECT id_aula, numero FROM aulas");
 $materias_options   = $conn->query("SELECT id_materia, nombre FROM materias");
-$itinerarios_options= $conn->query("SELECT id_itinerario, horario FROM itinerario");
+$itinerarios_options= $conn->query("SELECT id_itinerario, hora_inicio FROM itinerario");
 ?>
 
 <!DOCTYPE html>
