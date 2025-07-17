@@ -1,66 +1,335 @@
 body {
-  font-family: Arial, sans-serif;
-  margin: 20px;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: #f4f7fb;
+  margin: 0;
+  padding: 20px;
 }
 
 .form-container {
-  background-color: #f9f9f9;
-  padding: 20px;
-  background-color: #a0b9f3;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  max-width: 800px;
-  margin: 20px auto;
+  max-width: 700px;
+  margin: 48px auto 0 auto;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 6px 32px rgba(30, 64, 175, 0.13);
+  padding: 44px 38px 38px 38px;
 }
 
 .form-group {
-  margin-bottom: 25px;
+  margin-bottom: 28px;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 5px;
-  font-weight: semi-bold;
+  margin-bottom: 7px;
+  font-weight: 700;
+  color: #263238;
+  font-size: 1.13em;
 }
 
 .form-group select,
-.form-group input[type="text"] {
+.form-group input[type="text"],
+.form-group input[type="time"],
+.form-group input[type="email"],
+.form-group input[type="number"] {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 13px 12px;
+  border: 1.5px solid #b0c4de;
+  border-radius: 7px;
+  font-size: 1.13em;
+  background: #f7faff;
+  transition: border 0.2s, box-shadow 0.2s;
   box-sizing: border-box;
 }
 
-.form-group button {
-  background: linear-gradient(to right, #3b6cdc, #6bd4e2);
+.form-group select:focus,
+.form-group input:focus {
+  border: 1.5px solid #0074ff;
+  outline: none;
+  box-shadow: 0 0 0 2px #e3eefd;
+}
+
+.form-group button[type="submit"] {
+  background: linear-gradient(135deg, #0074ff 60%, #00c6ff 100%);
   color: white;
   width: 100%;
-  padding: 10px 15px;
+  padding: 15px 20px;
   border: none;
-  border-radius: 5px;
+  border-radius: 7px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 1.13em;
+  font-weight: 700;
+  transition: background 0.18s, box-shadow 0.18s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.form-group button[type="submit"]:hover {
+  background: linear-gradient(135deg, #0056b3 60%, #00e1ff 100%);
+  box-shadow: 0 4px 16px rgba(0, 118, 255, 0.18);
 }
 
 .back-button {
-  margin-top: 5px;
-  display: inline-block;
-  padding: 10px 15px;
-  background-color: #6c757d;
+  display: block;
+  margin: 36px auto 0 auto;
+  max-width: 350px;
+  background: linear-gradient(135deg, #0074ff 60%, #00c6ff 100%);
   color: white;
-  width: 350px;
   text-align: center;
   text-decoration: none;
-  border-radius: 5px;
-}
-
-.form-group button:hover {
-  background: #3b6cdc;
-  transition: 150ms;
+  border-radius: 7px;
+  padding: 15px 0;
+  font-size: 1.13em;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: background 0.18s;
 }
 
 .back-button:hover {
-  background-color: #4f5568;
-  transition: 150ms;
+  background: linear-gradient(135deg, #0056b3 60%, #00e1ff 100%);
+}
+
+/* Estilos para los contenedores de select con botones */
+.select-container {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.select-container select {
+  min-width: 220px;
+  max-width: 400px;
+  font-size: 1.13em;
+  height: 48px;
+}
+
+/* Estilos para los botones de acción */
+.btn-action {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  border: none;
+  font-size: 1.4em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0074ff 60%, #00c6ff 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: background 0.18s, box-shadow 0.18s;
+  position: relative;
+}
+
+.btn-action:hover {
+  background: linear-gradient(135deg, #0056b3 60%, #00e1ff 100%);
+  box-shadow: 0 4px 16px rgba(0, 118, 255, 0.18);
+}
+
+.btn-edit,
+.btn-delete,
+.btn-add {
+  background: linear-gradient(135deg, #0074ff 60%, #00c6ff 100%) !important;
+  color: #fff !important;
+}
+
+.btn-edit:hover,
+.btn-delete:hover,
+.btn-add:hover {
+  background: linear-gradient(135deg, #0056b3 60%, #00e1ff 100%) !important;
+}
+
+/* Estilos para campos de solo lectura */
+.form-group input[readonly] {
+  background: #f8f9fa !important;
+  border: 1.5px solid #e9ecef !important;
+  color: #495057 !important;
+  font-weight: 500;
+}
+
+/* Estilos para el título */
+.form-container h2 {
+  font-size: 2.2em;
+  color: #1a237e;
+  font-weight: 800;
+  margin-bottom: 32px;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+/* Estilos para campos de tiempo */
+.form-group input[type="time"] {
+  max-width: 180px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .form-container {
+    padding: 18px 2vw;
+  }
+}
+
+@media (max-width: 600px) {
+  .form-container {
+    max-width: 100vw;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 8vw 2vw;
+  }
+}
+
+/* Estilos para modales */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 2100;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.25);
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 32px 28px 24px 28px;
+  border-radius: 14px;
+  min-width: 320px;
+  max-width: 95vw;
+  box-shadow: 0 8px 32px rgba(30, 64, 175, 0.13);
+  margin: 0 auto;
+  position: relative;
+}
+
+.modal h3 {
+  margin-top: 0;
+  font-size: 1.5em;
+  color: #1a237e;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+
+.modal .form-group label {
+  font-weight: 600;
+  color: #222;
+}
+
+.modal .form-group input,
+.modal .form-group select {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #b0c4de;
+  border-radius: 6px;
+  font-size: 1.08em;
+  margin-bottom: 8px;
+  background: #f7faff;
+}
+
+.acciones-modal {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+  justify-content: flex-end;
+}
+
+.acciones-modal button,
+.acciones-modal .btn-edit {
+  background: linear-gradient(135deg, #0074ff 60%, #00c6ff 100%);
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 11px 28px;
+  font-size: 1.08em;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+
+.acciones-modal button:hover,
+.acciones-modal .btn-edit:hover {
+  background: linear-gradient(135deg, #0056b3 60%, #00e1ff 100%);
+}
+
+.acciones-modal button[type="button"] {
+  background: #f5f5f5;
+  color: #222;
+  border: 1px solid #b0c4de;
+}
+
+.acciones-modal button[type="button"]:hover {
+  background: #e3eefd;
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  position: absolute;
+  right: 18px;
+  top: 10px;
+}
+
+.close:hover {
+  color: #1a237e;
+}
+
+/* Estilos adicionales para modales */
+.modal.show {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Estilos para la lista de profesores en el modal */
+.profesor-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid #e9ecef;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.profesor-row:hover {
+  background-color: #f8f9fa;
+}
+
+.profesor-nombre {
+  font-weight: 500;
+  color: #333;
+}
+
+.btn-select-profesor {
+  background: #0074ff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-select-profesor:hover {
+  background: #0056b3;
+}
+
+/* Asegurar que los modales estén siempre centrados */
+#modal-profesor,
+#selectProfesorModal {
+  display: none;
+  position: fixed;
+  z-index: 2100;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.25);
+  align-items: center;
+  justify-content: center;
 }

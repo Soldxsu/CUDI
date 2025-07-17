@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 12-06-2025 a las 18:35:27
--- Versión del servidor: 10.4.28-MariaDB
--- Versión de PHP: 8.1.17
+-- Tiempo de generación: 17-07-2025 a las 02:50:20
+-- Versión del servidor: 10.4.32-MariaDB
+-- Versión de PHP: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -57,7 +57,9 @@ INSERT INTO `aulas` (`id_aula`, `piso`, `cantidad`, `numero`) VALUES
 (18, 2, 50, 'Laboratorio 4'),
 (19, 2, 50, '9'),
 (20, 2, 50, '8A'),
-(21, 2, 50, 'Laboratorio 3');
+(21, 2, 50, 'Laboratorio 3'),
+(22, 0, 30, 'Biblioteca'),
+(23, 0, 10, 'Sala de Reuniones');
 
 -- --------------------------------------------------------
 
@@ -120,7 +122,8 @@ CREATE TABLE `dias` (
   `jornada_id` int(11) NOT NULL,
   `itinerario_id` int(11) NOT NULL,
   `materia_id` int(11) NOT NULL,
-  `aula_id` int(11) NOT NULL
+  `aula_id` int(11) NOT NULL,
+  `profesor_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_spanish2_ci;
 
 -- --------------------------------------------------------
@@ -131,16 +134,23 @@ CREATE TABLE `dias` (
 
 CREATE TABLE `itinerario` (
   `id_itinerario` int(11) NOT NULL,
-  `hora_inicio` time NOT NULL,
-  `hora_fin` time NOT NULL
+  `hora_fin` time NOT NULL,
+  `hora_inicio` time NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_spanish2_ci;
 
 --
 -- Volcado de datos para la tabla `itinerario`
 --
 
-INSERT INTO `itinerario` (`id_itinerario`, `hora_inicio`, `hora_fin`) VALUES
-(1, '01:00:00', '02:00:00');
+INSERT INTO `itinerario` (`id_itinerario`, `hora_fin`, `hora_inicio`) VALUES
+(1, '00:00:00', '00:00:00'),
+(2, '14:12:00', '12:22:00'),
+(3, '04:32:00', '13:45:00'),
+(4, '14:59:00', '13:50:00'),
+(5, '15:30:00', '12:30:00'),
+(6, '15:30:00', '13:00:00'),
+(7, '17:30:00', '15:29:00'),
+(8, '17:30:00', '15:30:00');
 
 -- --------------------------------------------------------
 
@@ -160,7 +170,6 @@ CREATE TABLE `jornada` (
 INSERT INTO `jornada` (`id_jornada`, `dias`) VALUES
 (1, 'Lunes'),
 (2, 'Martes'),
-(3, 'Martes'),
 (4, 'Jueves'),
 (5, 'Viernes'),
 (6, 'Sábado'),
@@ -174,7 +183,7 @@ INSERT INTO `jornada` (`id_jornada`, `dias`) VALUES
 
 CREATE TABLE `materias` (
   `id_materia` int(11) NOT NULL,
-  `nombre` varchar(70) NOT NULL,
+  `nombre` varchar(100) NOT NULL,
   `carrera_id` int(11) DEFAULT NULL,
   `curso_pre_admision_id` int(11) DEFAULT NULL,
   `profesor_id` int(11) DEFAULT NULL
@@ -186,8 +195,8 @@ CREATE TABLE `materias` (
 
 INSERT INTO `materias` (`id_materia`, `nombre`, `carrera_id`, `curso_pre_admision_id`, `profesor_id`) VALUES
 (1, 'Inglés Básico', 3, NULL, NULL),
-(2, 'Inglés Técnico', 3, NULL, NULL),
-(3, 'Informática', 3, NULL, NULL),
+(2, 'Inglés Técnico', NULL, NULL, 2),
+(3, 'Informática', 3, NULL, 2),
 (4, 'Técnicas Básicas de Laboratorio', 3, NULL, NULL),
 (5, 'Matemática Aplicada', 3, NULL, NULL),
 (6, 'Química General', 3, NULL, NULL),
@@ -197,7 +206,7 @@ INSERT INTO `materias` (`id_materia`, `nombre`, `carrera_id`, `curso_pre_admisio
 (10, 'Biotecnología Clásica y Moderna', 3, NULL, NULL),
 (11, 'Bioquímica', 3, NULL, NULL),
 (12, 'Laboratorio de Química Instrumental', 3, NULL, NULL),
-(13, 'Bases de la Microbiología Aplicada', 3, NULL, NULL),
+(13, 'Bases de la Microbiología Aplicada', 3, NULL, 2),
 (14, 'Técnicas Inmunológicas', 3, NULL, NULL),
 (15, 'Estadística Aplicada', 3, NULL, NULL),
 (16, 'Higiene y Seguridad Industrial', 3, NULL, NULL),
@@ -248,151 +257,151 @@ INSERT INTO `materias` (`id_materia`, `nombre`, `carrera_id`, `curso_pre_admisio
 (61, 'Programación', 4, NULL, NULL),
 (62, 'Ciencias aplicadas al diseño', 4, NULL, NULL),
 (63, 'Taller de Diseño III', 4, NULL, NULL),
-(64, 'Morfología II', 4, NULL, 1),
-(65, 'Tecnologías de fabricación digital I', 4, NULL, 1),
-(66, 'Asignatura UNAHUR', 4, NULL, 1),
-(67, 'Taller de Diseño IV', 4, NULL, 1),
-(68, 'Tecnología III', 4, NULL, 1),
-(69, 'Tecnologías de fabricación digital II', 4, NULL, 1),
-(70, 'Diseño e industria', 4, NULL, 1),
-(71, 'Inglés I', 4, NULL, 1),
-(72, 'Programación I', 5, NULL, 1),
-(73, 'Sistemas de Procesamientos de datos', 5, NULL, 1),
-(74, 'Matemática', 5, NULL, 1),
-(75, 'Ingles I', 5, NULL, 1),
-(76, 'Laboratorio de Computación I', 5, NULL, 1),
-(77, 'Programación II', 5, NULL, 1),
-(78, 'Arquitectura y Sistemas Operativos', 5, NULL, 1),
-(79, 'Estadística', 5, NULL, 1),
-(80, 'Metodología de la Investigación', 5, NULL, 1),
-(81, 'Inglés II', 5, NULL, 1),
-(82, 'Laboratorio de Computación II', 5, NULL, 1),
-(83, 'Programación III', 5, NULL, 1),
-(84, 'Organización Contable de la Empresa', 5, NULL, 1),
-(85, 'Organización Empresarial', 5, NULL, 1),
-(86, 'Elementos de Investigación Operativa', 5, NULL, 1),
-(87, 'Laboratorio de Computación III', 5, NULL, 1),
-(88, 'Diseño y administración de bases de datos', 5, NULL, 1),
-(89, 'Metodología de Sistemas I', 5, NULL, 1),
-(90, 'Legislación', 5, NULL, 1),
-(91, 'Laboratorio de Computación IV', 5, NULL, 1),
-(92, 'Práctica Profesional', 5, NULL, 1),
-(93, 'Economía de la cultura', 6, NULL, 1),
-(94, 'Cultura lúdica: jugar es humano', 6, NULL, 1),
-(95, 'Inglés II', 6, NULL, 1),
-(96, 'Planificación de negocios', 6, NULL, 1),
-(97, 'Metodología de la investigación II', 6, NULL, 1),
-(98, 'Inglés I', 6, NULL, 1),
-(99, 'Ética y liderazgo', 6, NULL, 1),
-(100, 'Taller proyectual', 6, NULL, 1),
-(101, 'Metodología de la investigación I', 6, NULL, 1),
-(102, 'Taller introductorio al diseño en 3D', 6, NULL, 1),
-(103, 'Q.A. (\"Control de calidad\")', 6, NULL, 1),
-(104, 'Producción y prácticas lúdicas II', 6, NULL, 1),
-(105, 'Internacionalización de proyectos', 6, NULL, 1),
-(106, 'Marketing digital', 6, NULL, 1),
-(107, 'Narrativas transmedia', 6, NULL, 1),
-(108, 'Taller de desarrollo de entornos virtuales', 6, NULL, 1),
-(109, 'Juegos serios II', 6, NULL, 1),
-(110, 'Modelos organizacionales', 6, NULL, 1),
-(111, 'Diseño lúdico II', 6, NULL, 1),
-(112, 'Taller de prototipado digital', 6, NULL, 1),
-(113, 'Taller de diseño y animación en 2D', 6, NULL, 1),
-(114, 'Juegos serios I', 6, NULL, 1),
-(115, 'Industria del videojuego', 6, NULL, 1),
-(116, 'Taller de diseño UIX/GUI', 6, NULL, 1),
-(117, 'Aspectos legales del desarrollo de videojuegos', 6, NULL, 1),
-(118, 'Producción y prácticas lúdicas I', 6, NULL, 1),
-(119, 'Historia de los videojuegos', 6, NULL, 1),
-(120, 'Gestión de proyectos', 6, NULL, 1),
-(121, 'Historia de la cultura II', 6, NULL, 1),
-(122, 'Historia del cine', 6, NULL, 1),
-(123, 'Pensamiento social argentino y latinoamericano', 6, NULL, 1),
-(124, 'Fundamentos de la programación I', 6, NULL, 1),
-(125, 'Diseño lúdico I', 6, NULL, 1),
-(126, 'Fundamentos de la programación II', 6, NULL, 1),
-(127, 'Historia de la cultura I', 6, NULL, 1),
-(128, 'La tecnología y sus usos', 6, NULL, 1),
-(129, 'Literatura y pensamiento', 6, NULL, 1),
-(130, 'Introducción al medio audiovisual', 6, NULL, 1),
-(131, 'Introducción a la comunicación', 6, NULL, 1),
-(132, 'Anatomofisiología', 7, NULL, 1),
-(133, 'Módulo Nº 1 Anatomía', 7, NULL, 1),
-(134, 'Módulo Nº2 Fisiología', 7, NULL, 1),
-(135, 'Química Biológica', 7, NULL, 1),
-(136, 'Física Biológica', 7, NULL, 1),
-(137, 'Introducción a la Enfermería en la Salud Pública', 7, NULL, 1),
-(138, 'Introducción a las Ciencias Psicosociales', 7, NULL, 1),
-(139, 'Enfermería Medica I', 7, NULL, 1),
-(140, 'Deontología I', 7, NULL, 1),
-(141, 'Microbiología y Parasitología', 7, NULL, 1),
-(142, 'Nutrición', 7, NULL, 1),
-(143, 'Enfermería En Salud Pública I', 7, NULL, 1),
-(144, 'Enfermería en Salud Materno Infantil', 7, NULL, 1),
-(145, 'Psicología Evolutiva', 7, NULL, 1),
-(146, 'Enfermería en Salud Mental', 7, NULL, 1),
-(147, 'Enfermería en Salud Pública II', 7, NULL, 1),
-(148, 'Enfermería Médica II', 7, NULL, 1),
-(149, 'Enfermería Quirúrgica', 7, NULL, 1),
-(150, 'Dietoterapia', 7, NULL, 1),
-(151, 'Enfermería Psiquiátrica', 7, NULL, 1),
-(152, 'Deontología II', 7, NULL, 1),
-(153, 'Enfermería Obstétrica', 7, NULL, 1),
-(154, 'Enfermería Pediátrica', 7, NULL, 1),
-(155, 'Introducción a la Administración en Enfermería', 7, NULL, 1),
-(156, 'Introducción a la Salud Comunitaria', 8, NULL, 1),
-(157, 'Anátomo-Fisiología I', 8, NULL, 1),
-(158, 'Genética Humana', 8, NULL, 1),
-(159, 'Introducción a la Obstetricia', 8, NULL, 1),
-(160, 'Anátomo-Fisiología II', 8, NULL, 1),
-(161, 'Salud Comunitaria I', 8, NULL, 1),
-(162, 'Bioquímica', 8, NULL, 1),
-(163, 'Cultura y alfabetización digital en la universidad', 8, NULL, 1),
-(164, 'Introducción a la Nutrición', 8, NULL, 1),
-(165, 'Salud Comunitaria II', 8, NULL, 1),
-(166, 'Obstetricia I', 8, NULL, 1),
-(167, 'Salud Sexual y Reproductiva', 8, NULL, 1),
-(168, 'Obstetricia II', 8, NULL, 1),
-(169, 'Antropología', 8, NULL, 1),
-(170, 'Salud Comunitaria III', 8, NULL, 1),
-(171, 'Asignatura UNAHUR', 8, NULL, 1),
-(172, 'Psicología', 8, NULL, 1),
-(173, 'Obstetricia III', 8, NULL, 1),
-(174, 'Salud Comunitaria IV', 8, NULL, 1),
-(175, 'Deontología y aspectos legales del ejercicio profe', 8, NULL, 1),
-(176, 'Obstetricia patológica', 8, NULL, 1),
-(177, 'Obstetricia IV', 8, NULL, 1),
-(178, 'Preparación Integral para la maternidad', 8, NULL, 1),
-(179, 'Microbiología', 8, NULL, 1),
-(180, 'Farmacología', 8, NULL, 1),
-(181, 'Evaluación de salud fetal', 8, NULL, 1),
-(182, 'Farmacología Obstétrica', 8, NULL, 1),
-(183, 'Práctica obstétrica integrada I', 8, NULL, 1),
-(184, 'Taller de investigación I', 8, NULL, 1),
-(185, 'Salud Comunitaria V', 8, NULL, 1),
-(186, 'Historia Sociosanitaria de la Salud', 8, NULL, 1),
-(187, 'Ética y desarrollo Profesional', 8, NULL, 1),
-(188, 'Puericultura', 8, NULL, 1),
-(189, 'Taller de investigación II', 8, NULL, 1),
-(190, 'Práctica obstétrica integrada II', 8, NULL, 1),
-(211, 'Introducción al Desarrollo Frontend con React', 11, NULL, 1),
-(212, 'Introducción al Desarrollo Backend con Nodejs', 11, NULL, 1),
-(213, 'Diseño UX', 11, NULL, 1),
-(214, 'Proyecto Final de Desarrollo Web', 11, NULL, 1),
-(215, 'Lectura y Escritura Académica', NULL, 3, 1),
-(216, 'Matemática', NULL, 3, 1),
-(217, 'Introducción al Conocimiento de la Física y la Química', NULL, 3, 1),
-(218, 'Pensamiento Matemático', NULL, 4, 1),
-(219, 'Lectura y Escritura', NULL, 4, 1),
-(220, 'Vida Universitaria', NULL, 4, 1),
-(221, 'Programación Inicial', NULL, 7, 1),
-(222, 'Matemática Inicial', NULL, 7, 1),
-(223, 'Lectura Comprensiva', NULL, 7, 1),
-(224, 'Matemática ', NULL, 5, 1),
-(225, 'Lectura y Escritura', NULL, 5, 1),
-(226, 'Sociedad y Vida universitaria', NULL, 5, 1),
-(227, 'Introducción al Pensamiento Científico (IPC)', NULL, 6, 1),
-(228, 'Introducción al Conocimiento de la Sociedad y el Estado (ICSE)', NULL, 6, 1);
+(64, 'Morfología II', 4, NULL, NULL),
+(65, 'Tecnologías de fabricación digital I', 4, NULL, NULL),
+(66, 'Asignatura UNAHUR', 4, NULL, NULL),
+(67, 'Taller de Diseño IV', 4, NULL, NULL),
+(68, 'Tecnología III', 4, NULL, NULL),
+(69, 'Tecnologías de fabricación digital II', 4, NULL, NULL),
+(70, 'Diseño e industria', 4, NULL, NULL),
+(71, 'Inglés I', 4, NULL, NULL),
+(72, 'Programación I', 5, NULL, NULL),
+(73, 'Sistemas de Procesamientos de datos', 5, NULL, NULL),
+(74, 'Matemática', 5, NULL, NULL),
+(75, 'Ingles I', 5, NULL, NULL),
+(76, 'Laboratorio de Computación I', 5, NULL, NULL),
+(77, 'Programación II', 5, NULL, NULL),
+(78, 'Arquitectura y Sistemas Operativos', 5, NULL, NULL),
+(79, 'Estadística', 5, NULL, NULL),
+(80, 'Metodología de la Investigación', 5, NULL, NULL),
+(81, 'Inglés II', 5, NULL, NULL),
+(82, 'Laboratorio de Computación II', 5, NULL, NULL),
+(83, 'Programación III', 5, NULL, NULL),
+(84, 'Organización Contable de la Empresa', 5, NULL, NULL),
+(85, 'Organización Empresarial', 5, NULL, NULL),
+(86, 'Elementos de Investigación Operativa', 5, NULL, NULL),
+(87, 'Laboratorio de Computación III', 5, NULL, NULL),
+(88, 'Diseño y administración de bases de datos', 5, NULL, NULL),
+(89, 'Metodología de Sistemas I', 5, NULL, NULL),
+(90, 'Legislación', 5, NULL, NULL),
+(91, 'Laboratorio de Computación IV', 5, NULL, NULL),
+(92, 'Práctica Profesional', 5, NULL, NULL),
+(93, 'Economía de la cultura', 6, NULL, NULL),
+(94, 'Cultura lúdica: jugar es humano', 6, NULL, NULL),
+(95, 'Inglés II', 6, NULL, NULL),
+(96, 'Planificación de negocios', 6, NULL, NULL),
+(97, 'Metodología de la investigación II', 6, NULL, NULL),
+(98, 'Inglés I', 6, NULL, NULL),
+(99, 'Ética y liderazgo', 6, NULL, NULL),
+(100, 'Taller proyectual', 6, NULL, NULL),
+(101, 'Metodología de la investigación I', 6, NULL, NULL),
+(102, 'Taller introductorio al diseño en 3D', 6, NULL, NULL),
+(103, 'Q.A. (\"Control de calidad\")', 6, NULL, NULL),
+(104, 'Producción y prácticas lúdicas II', 6, NULL, NULL),
+(105, 'Internacionalización de proyectos', 6, NULL, NULL),
+(106, 'Marketing digital', 6, NULL, NULL),
+(107, 'Narrativas transmedia', 6, NULL, NULL),
+(108, 'Taller de desarrollo de entornos virtuales', 6, NULL, NULL),
+(109, 'Juegos serios II', 6, NULL, NULL),
+(110, 'Modelos organizacionales', 6, NULL, NULL),
+(111, 'Diseño lúdico II', 6, NULL, NULL),
+(112, 'Taller de prototipado digital', 6, NULL, NULL),
+(113, 'Taller de diseño y animación en 2D', 6, NULL, NULL),
+(114, 'Juegos serios I', 6, NULL, NULL),
+(115, 'Industria del videojuego', 6, NULL, NULL),
+(116, 'Taller de diseño UIX/GUI', 6, NULL, NULL),
+(117, 'Aspectos legales del desarrollo de videojuegos', 6, NULL, NULL),
+(118, 'Producción y prácticas lúdicas I', 6, NULL, NULL),
+(119, 'Historia de los videojuegos', 6, NULL, NULL),
+(120, 'Gestión de proyectos', 6, NULL, NULL),
+(121, 'Historia de la cultura II', 6, NULL, NULL),
+(122, 'Historia del cine', 6, NULL, NULL),
+(123, 'Pensamiento social argentino y latinoamericano', 6, NULL, NULL),
+(124, 'Fundamentos de la programación I', 6, NULL, NULL),
+(125, 'Diseño lúdico I', 6, NULL, NULL),
+(126, 'Fundamentos de la programación II', 6, NULL, NULL),
+(127, 'Historia de la cultura I', 6, NULL, NULL),
+(128, 'La tecnología y sus usos', 6, NULL, NULL),
+(129, 'Literatura y pensamiento', 6, NULL, NULL),
+(130, 'Introducción al medio audiovisual', 6, NULL, NULL),
+(131, 'Introducción a la comunicación', 6, NULL, NULL),
+(132, 'Anatomofisiología', 7, NULL, NULL),
+(133, 'Módulo Nº 1 Anatomía', 7, NULL, NULL),
+(134, 'Módulo Nº2 Fisiología', 7, NULL, NULL),
+(135, 'Química Biológica', 7, NULL, NULL),
+(136, 'Física Biológica', 7, NULL, NULL),
+(137, 'Introducción a la Enfermería en la Salud Pública', 7, NULL, NULL),
+(138, 'Introducción a las Ciencias Psicosociales', 7, NULL, NULL),
+(139, 'Enfermería Medica I', 7, NULL, NULL),
+(140, 'Deontología I', 7, NULL, NULL),
+(141, 'Microbiología y Parasitología', 7, NULL, NULL),
+(142, 'Nutrición', 7, NULL, NULL),
+(143, 'Enfermería En Salud Pública I', 7, NULL, NULL),
+(144, 'Enfermería en Salud Materno Infantil', 7, NULL, NULL),
+(145, 'Psicología Evolutiva', 7, NULL, NULL),
+(146, 'Enfermería en Salud Mental', 7, NULL, NULL),
+(147, 'Enfermería en Salud Pública II', 7, NULL, NULL),
+(148, 'Enfermería Médica II', 7, NULL, NULL),
+(149, 'Enfermería Quirúrgica', 7, NULL, NULL),
+(150, 'Dietoterapia', 7, NULL, NULL),
+(151, 'Enfermería Psiquiátrica', 7, NULL, NULL),
+(152, 'Deontología II', 7, NULL, NULL),
+(153, 'Enfermería Obstétrica', 7, NULL, NULL),
+(154, 'Enfermería Pediátrica', 7, NULL, NULL),
+(155, 'Introducción a la Administración en Enfermería', 7, NULL, NULL),
+(156, 'Introducción a la Salud Comunitaria', 8, NULL, NULL),
+(157, 'Anátomo-Fisiología I', 8, NULL, NULL),
+(158, 'Genética Humana', 8, NULL, NULL),
+(159, 'Introducción a la Obstetricia', 8, NULL, NULL),
+(160, 'Anátomo-Fisiología II', 8, NULL, NULL),
+(161, 'Salud Comunitaria I', 8, NULL, NULL),
+(162, 'Bioquímica', 8, NULL, NULL),
+(163, 'Cultura y alfabetización digital en la universidad', 8, NULL, NULL),
+(164, 'Introducción a la Nutrición', 8, NULL, NULL),
+(165, 'Salud Comunitaria II', 8, NULL, NULL),
+(166, 'Obstetricia I', 8, NULL, NULL),
+(167, 'Salud Sexual y Reproductiva', 8, NULL, NULL),
+(168, 'Obstetricia II', 8, NULL, NULL),
+(169, 'Antropología', 8, NULL, NULL),
+(170, 'Salud Comunitaria III', 8, NULL, NULL),
+(171, 'Asignatura UNAHUR', 8, NULL, NULL),
+(172, 'Psicología', 8, NULL, NULL),
+(173, 'Obstetricia III', 8, NULL, NULL),
+(174, 'Salud Comunitaria IV', 8, NULL, NULL),
+(175, 'Deontología y aspectos legales del Ejercicio Profesional', 8, NULL, NULL),
+(176, 'Obstetricia patológica', 8, NULL, NULL),
+(177, 'Obstetricia IV', 8, NULL, NULL),
+(178, 'Preparación Integral para la maternidad', 8, NULL, NULL),
+(179, 'Microbiología', 8, NULL, NULL),
+(180, 'Farmacología', 8, NULL, NULL),
+(181, 'Evaluación de salud fetal', 8, NULL, NULL),
+(182, 'Farmacología Obstétrica', 8, NULL, NULL),
+(183, 'Práctica obstétrica integrada I', 8, NULL, NULL),
+(184, 'Taller de investigación I', 8, NULL, NULL),
+(185, 'Salud Comunitaria V', 8, NULL, NULL),
+(186, 'Historia Sociosanitaria de la Salud', 8, NULL, NULL),
+(187, 'Ética y desarrollo Profesional', 8, NULL, NULL),
+(188, 'Puericultura', 8, NULL, NULL),
+(189, 'Taller de investigación II', 8, NULL, NULL),
+(190, 'Práctica obstétrica integrada II', 8, NULL, NULL),
+(211, 'Introducción al Desarrollo Frontend con React', 11, NULL, NULL),
+(212, 'Introducción al Desarrollo Backend con Nodejs', 11, NULL, NULL),
+(213, 'Diseño UX', 11, NULL, NULL),
+(214, 'Proyecto Final de Desarrollo Web', 11, NULL, NULL),
+(215, 'Lectura y Escritura Académica', NULL, 3, NULL),
+(216, 'Matemática', NULL, 3, NULL),
+(217, 'Introducción al Conocimiento de la Física y la Química', NULL, 3, NULL),
+(218, 'Pensamiento Matemático', NULL, 4, NULL),
+(219, 'Lectura y Escritura', NULL, 4, NULL),
+(220, 'Vida Universitaria', NULL, 4, NULL),
+(221, 'Programación Inicial', NULL, 7, NULL),
+(222, 'Matemática Inicial', NULL, 7, NULL),
+(223, 'Lectura Comprensiva', NULL, 7, NULL),
+(224, 'Matemática ', NULL, 5, NULL),
+(225, 'Lectura y Escritura', NULL, 5, NULL),
+(226, 'Sociedad y Vida universitaria', NULL, 5, NULL),
+(227, 'Introducción al Pensamiento Científico (IPC)', NULL, 6, NULL),
+(228, 'Introducción al Conocimiento de la Sociedad y el Estado (ICSE)', NULL, 6, NULL);
 
 -- --------------------------------------------------------
 
@@ -404,8 +413,8 @@ CREATE TABLE `profesores` (
   `id_profesor` int(11) NOT NULL,
   `nombre` varchar(20) NOT NULL,
   `apellido` varchar(20) NOT NULL,
-  `correo` varchar(40) NOT NULL,
-  `telefono` int(10) NOT NULL
+  `correo` varchar(40) DEFAULT NULL,
+  `telefono` int(10) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_spanish2_ci;
 
 --
@@ -413,7 +422,8 @@ CREATE TABLE `profesores` (
 --
 
 INSERT INTO `profesores` (`id_profesor`, `nombre`, `apellido`, `correo`, `telefono`) VALUES
-(1, 'Cudi', 'Ejemplo', 'correo@gmail.com', 1122222222);
+(1, 'Cudi', 'Ejemplo', 'correo@gmail.com', 1122222222),
+(2, 'José', 'Salazar', 'profe@gmail.com', NULL);
 
 -- --------------------------------------------------------
 
@@ -489,7 +499,8 @@ ALTER TABLE `dias`
   ADD UNIQUE KEY `itinerario_id` (`itinerario_id`),
   ADD KEY `jornada_id` (`jornada_id`),
   ADD KEY `materia_id` (`materia_id`),
-  ADD KEY `aula_id` (`aula_id`);
+  ADD KEY `aula_id` (`aula_id`),
+  ADD KEY `profesor_id` (`profesor_id`);
 
 --
 -- Indices de la tabla `itinerario`
@@ -539,7 +550,7 @@ ALTER TABLE `usuarios`
 -- AUTO_INCREMENT de la tabla `aulas`
 --
 ALTER TABLE `aulas`
-  MODIFY `id_aula` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id_aula` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT de la tabla `carreras`
@@ -557,13 +568,13 @@ ALTER TABLE `cursos_pre_admisiones`
 -- AUTO_INCREMENT de la tabla `dias`
 --
 ALTER TABLE `dias`
-  MODIFY `id_dia` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id_dia` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT de la tabla `itinerario`
 --
 ALTER TABLE `itinerario`
-  MODIFY `id_itinerario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id_itinerario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT de la tabla `jornada`
@@ -581,7 +592,7 @@ ALTER TABLE `materias`
 -- AUTO_INCREMENT de la tabla `profesores`
 --
 ALTER TABLE `profesores`
-  MODIFY `id_profesor` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id_profesor` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT de la tabla `universidades`
@@ -603,30 +614,31 @@ ALTER TABLE `usuarios`
 -- Filtros para la tabla `carreras`
 --
 ALTER TABLE `carreras`
-  ADD CONSTRAINT `carreras_ibfk_1` FOREIGN KEY (`universidad_id`) REFERENCES `universidades` (`id_universidad`);
+  ADD CONSTRAINT `carreras_ibfk_1` FOREIGN KEY (`universidad_id`) REFERENCES `universidades` (`id_universidad`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Filtros para la tabla `dias`
 --
 ALTER TABLE `dias`
-  ADD CONSTRAINT `dias_ibfk_1` FOREIGN KEY (`aula_id`) REFERENCES `aulas` (`id_aula`),
-  ADD CONSTRAINT `dias_ibfk_2` FOREIGN KEY (`materia_id`) REFERENCES `materias` (`id_materia`),
-  ADD CONSTRAINT `dias_ibfk_3` FOREIGN KEY (`itinerario_id`) REFERENCES `itinerario` (`id_itinerario`),
-  ADD CONSTRAINT `dias_ibfk_4` FOREIGN KEY (`jornada_id`) REFERENCES `jornada` (`id_jornada`);
+  ADD CONSTRAINT `dias_ibfk_1` FOREIGN KEY (`aula_id`) REFERENCES `aulas` (`id_aula`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `dias_ibfk_2` FOREIGN KEY (`materia_id`) REFERENCES `materias` (`id_materia`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `dias_ibfk_3` FOREIGN KEY (`itinerario_id`) REFERENCES `itinerario` (`id_itinerario`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `dias_ibfk_4` FOREIGN KEY (`jornada_id`) REFERENCES `jornada` (`id_jornada`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `dias_ibfk_5` FOREIGN KEY (`profesor_id`) REFERENCES `profesores` (`id_profesor`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Filtros para la tabla `materias`
 --
 ALTER TABLE `materias`
-  ADD CONSTRAINT `materias_ibfk_1` FOREIGN KEY (`profesor_id`) REFERENCES `profesores` (`id_profesor`),
-  ADD CONSTRAINT `materias_ibfk_2` FOREIGN KEY (`carrera_id`) REFERENCES `carreras` (`id_carrera`),
-  ADD CONSTRAINT `materias_ibfk_3` FOREIGN KEY (`curso_pre_admision_id`) REFERENCES `cursos_pre_admisiones` (`id_curso_pre_admision`);
+  ADD CONSTRAINT `materias_ibfk_1` FOREIGN KEY (`profesor_id`) REFERENCES `profesores` (`id_profesor`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `materias_ibfk_2` FOREIGN KEY (`carrera_id`) REFERENCES `carreras` (`id_carrera`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `materias_ibfk_3` FOREIGN KEY (`curso_pre_admision_id`) REFERENCES `cursos_pre_admisiones` (`id_curso_pre_admision`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Filtros para la tabla `universidades`
 --
 ALTER TABLE `universidades`
-  ADD CONSTRAINT `universidades_ibfk_2` FOREIGN KEY (`curso_pre_admision_id`) REFERENCES `cursos_pre_admisiones` (`id_curso_pre_admision`);
+  ADD CONSTRAINT `universidades_ibfk_2` FOREIGN KEY (`curso_pre_admision_id`) REFERENCES `cursos_pre_admisiones` (`id_curso_pre_admision`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

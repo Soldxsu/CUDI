@@ -3,7 +3,7 @@ include 'conexion.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $type = $_POST['type'];
-    $id = $_POST['id'];
+    $id = isset($_POST['id']) ? $_POST['id'] : null;
     
     $table = '';
     $fields = '';
@@ -19,7 +19,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             break;
         case 'materia':
             $table = 'materias';
-            $fields = 'nombre, carrera_id, curso_pre_admision_id, profesor_id, carrera_id as diplomatura_id'; // diplomatura_id es alias para compatibilidad
+            $fields = 'm.nombre, m.carrera_id, m.curso_pre_admision_id, m.profesor_id, 
+                      c.nombre as carrera_nombre, 
+                      cp.nombre_curso as curso_pre_admision_nombre,
+                      p.nombre as profesor_nombre, p.apellido as profesor_apellido';
             break;
         case 'aula':
             $table = 'aulas';
@@ -43,11 +46,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             break;
         case 'all_profesores':
             $result = $conn->query("SELECT id_profesor, nombre, apellido FROM profesores");
+            if (!$result) {
+                echo json_encode(['error' => 'Error en la consulta SQL: ' . $conn->error]);
+                $conn->close();
+                exit;
+            }
             $profesores = array();
             while ($row = $result->fetch_assoc()) {
                 $profesores[] = $row;
             }
-            echo json_encode($profesores);
+            if (empty($profesores)) {
+                echo json_encode(['error' => 'No hay profesores en la base de datos.']);
+            } else {
+                echo json_encode($profesores);
+            }
             $conn->close();
             exit;
         default:
@@ -62,7 +74,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if ($type === 'carrera' || $type === 'diplomatura') {
         $id_field = 'id_carrera';
     }
-    $sql = "SELECT $fields FROM $table WHERE $id_field = $id";
+    if ($type === 'materia') {
+        $sql = "SELECT $fields FROM $table m 
+                LEFT JOIN carreras c ON m.carrera_id = c.id_carrera 
+                LEFT JOIN cursos_pre_admisiones cp ON m.curso_pre_admision_id = cp.id_curso_pre_admision 
+                LEFT JOIN profesores p ON m.profesor_id = p.id_profesor 
+                WHERE m.$id_field = $id";
+    } else {
+        $sql = "SELECT $fields FROM $table WHERE $id_field = $id";
+    }
     $result = $conn->query($sql);
     
     if ($result->num_rows > 0) {

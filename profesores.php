@@ -51,6 +51,7 @@ $materias = $conn->query("SELECT id_materia, nombre, carrera_id, curso_pre_admis
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Profesores</title>
     <link rel="stylesheet" href="css/añadir.css">
+    <!-- jQuery y Select2 -->
     <style>
         body {
             background: #f4f7fb;
@@ -210,36 +211,100 @@ $materias = $conn->query("SELECT id_materia, nombre, carrera_id, curso_pre_admis
         .btn-edit { background: #ffc107; color: #222; }
         .btn-delete { background: #dc3545; color: #fff; }
         .btn-link { background: #007bff; color: #fff; }
+        /* --- MODALES: estilos copiados de añadir.css para unificar diseño --- */
         .modal {
             display: none;
             position: fixed;
-            z-index: 9999;
-            left: 0; top: 0; width: 100vw; height: 100vh;
-            background: rgba(0,0,0,0.3);
+            z-index: 2100;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.25);
             align-items: center;
             justify-content: center;
         }
         .modal-content {
             background: #fff;
-            padding: 30px 24px;
-            border-radius: 10px;
+            padding: 32px 28px 24px 28px;
+            border-radius: 14px;
             min-width: 320px;
             max-width: 95vw;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+            box-shadow: 0 8px 32px rgba(30, 64, 175, 0.13);
+            margin: 0 auto;
+            position: relative;
         }
-        .modal-content h3 { margin-top: 0; }
-        .modal-content .form-group { margin-bottom: 15px; }
-        .modal-content label { font-weight: bold; }
-        .modal-content input, .modal-content select {
+        .modal-content h3 {
+            margin-top: 0;
+            font-size: 1.5em;
+            color: #1a237e;
+            font-weight: 700;
+            margin-bottom: 18px;
+        }
+        .modal-content .form-group {
+            margin-bottom: 18px;
+        }
+        .modal-content label {
+            font-weight: 600;
+            color: #222;
+        }
+        .modal-content input,
+        .modal-content select {
             width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            padding: 9px 10px;
+            border: 1px solid #b0c4de;
+            border-radius: 6px;
+            font-size: 1.08em;
+            margin-bottom: 8px;
+            background: #f7faff;
         }
-        .modal-content .acciones-modal {
+        .acciones-modal {
             display: flex;
-            gap: 10px;
-            margin-top: 10px;
+            gap: 12px;
+            margin-top: 18px;
+            justify-content: flex-end;
+        }
+        .acciones-modal button {
+            border: none;
+            border-radius: 7px;
+            padding: 11px 28px;
+            font-size: 1.08em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.18s;
+        }
+        .acciones-modal .btn-edit {
+            background: #ffc107;
+            color: #222;
+        }
+        .acciones-modal .btn-edit:hover {
+            background: #ffb300;
+        }
+        .acciones-modal button[type="button"] {
+            background: #f5f5f5;
+            color: #222;
+            border: 1px solid #b0c4de;
+        }
+        .acciones-modal button[type="button"]:hover {
+            background: #e3eefd;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            position: absolute;
+            right: 18px;
+            top: 10px;
+        }
+        .close:hover {
+            color: #1a237e;
+        }
+        .modal.show {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
         }
         @media (max-width: 900px) {
             .main-container { padding: 12px 2vw; }
@@ -261,6 +326,18 @@ $materias = $conn->query("SELECT id_materia, nombre, carrera_id, curso_pre_admis
         /* Forzar z-index alto en el dropdown de select2 */
         .select2-container--open .select2-dropdown {
             z-index: 10000 !important;
+        }
+        /* Forzar que siempre aparezca el campo de búsqueda */
+        .select2earch--dropdown {
+            display: block !important;
+        }
+        .select2search--dropdown .select2ield {
+            display: block !important;
+            width:100rtant;
+            padding: 8px !important;
+            border: 1px solid #ddd !important;
+            border-radius: 4px !important;
+            font-size:14important;
         }
     </style>
     <!-- Agregar Select2 para búsqueda en el select de materias -->
@@ -374,43 +451,43 @@ $materias = $conn->query("SELECT id_materia, nombre, carrera_id, curso_pre_admis
                 <input type="hidden" name="action" value="link">
                 <input type="hidden" name="id_profesor" id="enlazar-id-profesor">
                 <div class="form-group">
-                    <label>Materia:</label>
-                    <select name="id_materia" required id="select-materia-modal">
-                        <option value="">Seleccione una materia</option>
-                        <?php 
-                        $materias->data_seek(0); 
-                        while($m = $materias->fetch_assoc()): 
-                            $nombre = $m['nombre'];
-                            $info = '';
-                            // Carrera
-                            if (isset($m['carrera_id']) && $m['carrera_id']) {
-                                $sql_c = "SELECT nombre FROM carreras WHERE id_carrera = " . intval($m['carrera_id']);
-                                $res_c = $conn->query($sql_c);
-                                if ($res_c && $row_c = $res_c->fetch_assoc()) {
-                                    $info = $row_c['nombre'];
+                    <label for="materia-modal">Materia:</label>
+                    <div class="select-container">
+                        <select id="materia-modal" name="id_materia" required>
+                            <option value="">Seleccione una materia</option>
+                            <?php $materias->data_seek(0); while ($row = $materias->fetch_assoc()): 
+                                $nombre = $row['nombre'];
+                                $info = '';
+                                // Carrera
+                                if (isset($row['carrera_id']) && $row['carrera_id']) {
+                                    $sql_c = "SELECT nombre FROM carreras WHERE id_carrera = " . intval($row['carrera_id']);
+                                    $res_c = $conn->query($sql_c);
+                                    if ($res_c && $row_c = $res_c->fetch_assoc()) {
+                                        $info = $row_c['nombre'];
+                                    }
                                 }
-                            }
-                            // Curso pre-admisión
-                            elseif (isset($m['curso_pre_admision_id']) && $m['curso_pre_admision_id']) {
-                                $sql_cp = "SELECT nombre_curso FROM cursos_pre_admisiones WHERE id_curso_pre_admision = " . intval($m['curso_pre_admision_id']);
-                                $res_cp = $conn->query($sql_cp);
-                                if ($res_cp && $row_cp = $res_cp->fetch_assoc()) {
-                                    $info = $row_cp['nombre_curso'];
+                                // Curso pre-admisión
+                                elseif (isset($row['curso_pre_admision_id']) && $row['curso_pre_admision_id']) {
+                                    $sql_cp = "SELECT nombre_curso FROM cursos_pre_admisiones WHERE id_curso_pre_admision = " . intval($row['curso_pre_admision_id']);
+                                    $res_cp = $conn->query($sql_cp);
+                                    if ($res_cp && $row_cp = $res_cp->fetch_assoc()) {
+                                        $info = $row_cp['nombre_curso'];
+                                    }
                                 }
-                            }
-                            // Diplomatura (si tienes campo diplomatura_id)
-                            elseif (isset($m['diplomatura_id']) && $m['diplomatura_id']) {
-                                $sql_d = "SELECT nombre FROM carreras WHERE id_carrera = " . intval($m['diplomatura_id']);
-                                $res_d = $conn->query($sql_d);
-                                if ($res_d && $row_d = $res_d->fetch_assoc()) {
-                                    $info = $row_d['nombre'];
+                                // Diplomatura (si tienes campo diplomatura_id)
+                                elseif (isset($row['diplomatura_id']) && $row['diplomatura_id']) {
+                                    $sql_d = "SELECT nombre FROM carreras WHERE id_carrera = " . intval($row['diplomatura_id']);
+                                    $res_d = $conn->query($sql_d);
+                                    if ($res_d && $row_d = $res_d->fetch_assoc()) {
+                                        $info = $row_d['nombre'];
+                                    }
                                 }
-                            }
-                            $label = $nombre . ($info ? ' (' . $info . ')' : '');
-                        ?>
-                        <option value="<?php echo $m['id_materia']; ?>"><?php echo htmlspecialchars($label); ?></option>
-                        <?php endwhile; ?>
-                    </select>
+                                $label = $nombre . ($info ? ' (' . $info . ')' : '');
+                            ?>
+                            <option value="<?php echo $row['id_materia']; ?>" data-carrera="<?php echo isset($row['carrera_id']) ? $row['carrera_id'] : '' ?>" data-curso="<?php echo isset($row['curso_pre_admision_id']) ? $row['curso_pre_admision_id'] : '' ?>"><?php echo htmlspecialchars($label); ?></option>
+                            <?php endwhile; ?>
+                        </select>
+                    </div>
                 </div>
                 <div class="acciones-modal">
                     <button type="submit" class="btn-link">Enlazar</button>
@@ -420,7 +497,17 @@ $materias = $conn->query("SELECT id_materia, nombre, carrera_id, curso_pre_admis
         </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
+    $(document).ready(function() {
+        // Solo inicializar Select2 para elementos que existen en el DOM
+        $('#jornada_id, #aula_id').select2({
+            placeholder: "Seleccione una opción",
+            width: '100%'
+        });
+    });
+
     function abrirModalAgregar() {
         document.getElementById('modal-titulo').textContent = 'Agregar Profesor';
         document.getElementById('modal-accion').value = 'add';
@@ -447,26 +534,22 @@ $materias = $conn->query("SELECT id_materia, nombre, carrera_id, curso_pre_admis
     function abrirModalEnlazar(id_profesor) {
         document.getElementById('enlazar-id-profesor').value = id_profesor;
         document.getElementById('modal-enlazar').style.display = 'flex';
-        // Inicializar Select2 cada vez que se abre el modal
+        // Inicializar Select2 para el select del modal con búsqueda habilitada
         setTimeout(function() {
-            if ($.fn.select2 && $('#select-materia-modal').data('select2')) {
-                $('#select-materia-modal').select2('destroy');
-            }
-            $('#select-materia-modal').select2({
+            $('#materia-modal').select2({
                 dropdownParent: $('#modal-enlazar'),
+                placeholder: "Seleccione una opción",
                 width: '100%',
-                placeholder: 'Seleccione una materia',
-                minimumResultsForSearch: 0,
-                language: {
-                    noResults: function() {
-                        return 'No se encontraron materias';
-                    }
-                }
+                minimumResultsForSearch: 0
             });
         }, 100);
     }
     function cerrarModalEnlazar() {
         document.getElementById('modal-enlazar').style.display = 'none';
+        // Destruir Select2 al cerrar el modal
+        if ($('#materia-modal').data('select2')) {
+            $('#materia-modal').select2('destroy');
+        }
     }
     function desenlazarMateria(id_profesor, id_materia, nombre) {
         if (!confirm('¿Está seguro de desenlazar la materia "' + nombre + '" de este profesor?')) return false;
@@ -493,11 +576,5 @@ $materias = $conn->query("SELECT id_materia, nombre, carrera_id, curso_pre_admis
         if (event.target === document.getElementById('modal-enlazar')) cerrarModalEnlazar();
     }
     </script>
-    <script>
-    // Filtro de materias en el modal de enlazar
-    // Elimina la inicialización global de Select2 en $(document).ready()
-    </script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 </body>
 </html> 

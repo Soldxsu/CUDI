@@ -64,7 +64,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input id="enviar" type="submit" value="Iniciar Sesión">
         </form>
     </div>
-    <a href="index.php" class="back-button" style="margin: 30px auto 0 auto; display: block; max-width: 350px;">Volver al Inicio</a>
 </body>
 
 </html>

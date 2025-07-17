@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
         case 'materia':
             $table = 'materias';
-            $nombre = $conn->real_escape_string($_POST['nombre']);
+            $nombre = ucwords(strtolower($conn->real_escape_string($_POST['nombre'])));
             $carrera_id = !empty($_POST['carrera_id']) ? (int)$_POST['carrera_id'] : 'NULL';
             $curso_pre_admision_id = !empty($_POST['curso_pre_admision_id']) ? (int)$_POST['curso_pre_admision_id'] : 'NULL';
             $profesor_id = !empty($_POST['profesor_id']) ? (int)$_POST['profesor_id'] : 'NULL';
@@ -57,14 +57,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
         case 'profesor':
             $table = 'profesores';
-            $nombre = $conn->real_escape_string($_POST['nombre']);
-            $apellido = $conn->real_escape_string($_POST['apellido']);
+            $nombre = ucwords(strtolower($conn->real_escape_string($_POST['nombre'])));
+            $apellido = ucwords(strtolower($conn->real_escape_string($_POST['apellido'])));
             $correo = $conn->real_escape_string($_POST['correo']);
-            $telefono = (int)$_POST['telefono'];
+            $telefono = $conn->real_escape_string($_POST['telefono']);
+            // Manejar campos opcionales
+            $correo_sql = empty($correo) ? 'NULL' : "'$correo'";
+            $telefono_sql = empty($telefono) ? 'NULL' : "'$telefono'";
+            
             if (!empty($id)) {
-                $sql = "UPDATE $table SET nombre = '$nombre', apellido = '$apellido', correo = '$correo', telefono = $telefono WHERE $id_field = $id";
+                $sql = "UPDATE $table SET nombre = '$nombre', apellido = '$apellido', correo = $correo_sql, telefono = $telefono_sql WHERE $id_field = $id";
             } else {
-                $sql = "INSERT INTO $table (nombre, apellido, correo, telefono) VALUES ('$nombre', '$apellido', '$correo', $telefono)";
+                $sql = "INSERT INTO $table (nombre, apellido, correo, telefono) VALUES ('$nombre', '$apellido', $correo_sql, $telefono_sql)";
             }
             break;
             

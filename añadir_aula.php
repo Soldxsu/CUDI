@@ -43,17 +43,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (strtotime($hora_fin) <= strtotime($hora_inicio)) {
         echo "<p style='color:red;'>La hora de fin debe ser mayor que la hora de inicio.</p>";
     } else {
-        // Buscar o crear itinerario
-        $itinerario_id = null;
-        $sql_it = "SELECT id_itinerario FROM itinerario WHERE hora_inicio = '$hora_inicio' AND hora_fin = '$hora_fin'";
-        $result_it = $conn->query($sql_it);
-        if ($result_it && $result_it->num_rows > 0) {
-            $row_it = $result_it->fetch_assoc();
-            $itinerario_id = $row_it['id_itinerario'];
-        } else {
-            $conn->query("INSERT INTO itinerario (hora_inicio, hora_fin) VALUES ('$hora_inicio', '$hora_fin')");
-            $itinerario_id = $conn->insert_id;
-        }
+    // Buscar o crear itinerario
+    $itinerario_id = null;
+    $sql_it = "SELECT id_itinerario FROM itinerario WHERE hora_inicio = '$hora_inicio' AND hora_fin = '$hora_fin'";
+    $result_it = $conn->query($sql_it);
+    if ($result_it && $result_it->num_rows > 0) {
+        $row_it = $result_it->fetch_assoc();
+        $itinerario_id = $row_it['id_itinerario'];
+    } else {
+        $conn->query("INSERT INTO itinerario (hora_inicio, hora_fin) VALUES ('$hora_inicio', '$hora_fin')");
+        $itinerario_id = $conn->insert_id;
+    }
 
         // Obtener profesor_id de la materia seleccionada
         $profesor_id = '';
@@ -87,26 +87,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $profe_ocupado = $row['profesor'] . ' ' . $row['apellido'];
             echo "<p style='color:red;'>No es posible reservar el aula: ya está ocupada por $materia_ocupada ($profe_ocupado) en el horario $horario_ocupado. Intente con otro horario.</p>";
         } else if (isset($_POST['id_dia']) && !empty($_POST['id_dia'])) {
-            $id_dia = $_POST['id_dia'];
+        $id_dia = $_POST['id_dia'];
             $sql = "UPDATE dias SET jornada_id = '$jornada_id', itinerario_id = $itinerario_id, materia_id = $materia_id, aula_id = $aula_id, profesor_id = $profesor_id WHERE id_dia = $id_dia";
-            if ($conn->query($sql) === TRUE) {
-                echo "<p style='color:green;'>Registro actualizado exitosamente.</p>";
-            } else {
-                echo "<p style='color:red;'>Error al actualizar el registro: " . $conn->error . "</p>";
-            }
+        if ($conn->query($sql) === TRUE) {
+            echo "<p style='color:green;'>Registro actualizado exitosamente.</p>";
         } else {
+            echo "<p style='color:red;'>Error al actualizar el registro: " . $conn->error . "</p>";
+        }
+    } else {
             if (empty($profesor_id)) {
                 echo "<p style='color:red;'>No se puede guardar la disposición: la materia seleccionada no tiene profesor asignado.</p>";
             } else {
                 $sql = "INSERT INTO dias (jornada_id, itinerario_id, materia_id, aula_id, profesor_id) VALUES ('$jornada_id', $itinerario_id, $materia_id, $aula_id, $profesor_id)";
-                if ($conn->query($sql) === TRUE) {
-                    echo "<p style='color:green;'>Nuevo registro creado exitosamente.</p>";
-                    $jornada_id = '';
-                    $itinerario_id = '';
-                    $materia_id = '';
-                    $aula_id = '';
-                } else {
-                    echo "<p style='color:red;'>Error al crear el registro: " . $conn->error . "</p>";
+        if ($conn->query($sql) === TRUE) {
+            echo "<p style='color:green;'>Nuevo registro creado exitosamente.</p>";
+            $jornada_id = '';
+            $itinerario_id = '';
+            $materia_id = '';
+            $aula_id = '';
+        } else {
+            echo "<p style='color:red;'>Error al crear el registro: " . $conn->error . "</p>";
                 }
             }
         }
@@ -131,185 +131,208 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="css/añadir.css">
     <style>
+        body {
+            background: #f4f7fb;
+            margin: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        .form-container {
+            max-width: 700px;
+            margin: 48px auto 0 auto;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 6px 32px rgba(30, 64, 175, 0.13);
+            padding: 44px 38px 38px 38px;
+        }
+        .form-container h2 {
+            font-size: 2.2em;
+            color: #1a237e;
+            font-weight: 800;
+            margin-bottom: 32px;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 28px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 7px;
+            font-weight: 700;
+            color: #263238;
+            font-size: 1.13em;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 13px 12px;
+            border: 1.5px solid #b0c4de;
+            border-radius: 7px;
+            font-size: 1.13em;
+            background: #f7faff;
+            transition: border 0.2s, box-shadow 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus {
+            border: 1.5px solid #0074ff;
+            outline: none;
+            box-shadow: 0 0 0 2px #e3eefd;
+        }
         .select-container {
-            position: relative;
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 14px;
             flex-wrap: nowrap;
             width: 100%;
         }
         .select-container select {
-            flex: 1 1 auto;
-            min-width: 350px;
-            max-width: 500px;
+            min-width: 220px;
+            max-width: 400px;
             font-size: 1.13em;
             height: 48px;
-            text-overflow: ellipsis;
-            overflow: hidden;
-            white-space: nowrap;
-        }
-        .select-container .btn-action {
-            flex: 0 0 auto;
-            width: 48px !important;
-            min-width: 48px !important;
-            max-width: 48px !important;
-            height: 48px !important;
-            font-size: 1.5em;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-sizing: border-box;
-        }
-        .select-container input[type="text"] {
-            width: 100%;
-            min-width: 0;
         }
         .btn-action {
-            padding: 8px 0;
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
             border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-left: 0;
-            width: 40px;
-            min-width: 40px;
-            max-width: 40px;
+            font-size: 1.4em;
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-        .btn-add {
-            background-color: #28a745;
-            color: white;
-        }
-        .btn-edit {
-            background-color: #ffc107;
-            color: #212529;
-        }
-        .btn-delete {
-            background-color: #dc3545;
-            color: white;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 500px;
-            border-radius: 8px;
+            background: linear-gradient(135deg, #0074ff 60%, #28a745 100%);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+            cursor: pointer;
+            transition: background 0.18s, box-shadow 0.18s;
             position: relative;
         }
-        #profesores-list {
-            max-height: 300px;
-            overflow-y: auto;
-            margin-top: 20px;
+        .btn-action:hover {
+            background: linear-gradient(135deg, #0056b3 60%, #218838 100%);
+            box-shadow: 0 4px 16px rgba(40,167,69,0.18);
         }
-        .profesor-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 15px;
+        .btn-action[title]:hover:after {
+            content: attr(title);
+            position: absolute;
+            left: 50%;
+            top: 110%;
+            transform: translateX(-50%);
+            background: #222;
+            color: #fff;
+            padding: 4px 10px;
             border-radius: 6px;
-            margin-bottom: 10px;
-            background: #f3f6fa;
-            cursor: pointer;
-            transition: background 0.2s;
-            border: 1px solid #e0e0e0;
+            font-size: 0.98em;
+            white-space: nowrap;
+            z-index: 100;
         }
-        .profesor-row:hover {
-            background: #d0e7ff;
+        .btn-edit, .btn-delete, .btn-add {
+            font-size: 1em;
+            font-weight: 600;
         }
-        .profesor-nombre {
-            font-size: 1.1em;
-            font-weight: 500;
+        .btn-edit {
+            background: #ffc107;
             color: #222;
         }
-        .btn-select-profesor {
-            background: #007bff;
+        .btn-edit:hover {
+            background: #ffb300;
+        }
+        .btn-delete {
+            background: #dc3545;
             color: #fff;
-            border: none;
-            border-radius: 4px;
-            padding: 6px 14px;
-            font-size: 1em;
-            cursor: pointer;
-            transition: background 0.2s;
         }
-        .btn-select-profesor:hover {
-            background: #0056b3;
+        .btn-delete:hover {
+            background: #b71c1c;
         }
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
+        .btn-add {
+            background: #28a745;
+            color: #fff;
         }
-        .close:hover {
-            color: black;
+        .btn-add:hover {
+            background: #218838;
         }
-        .form-group {
-            margin-bottom: 15px;
+        .form-group input[type="time"] {
+            max-width: 180px;
         }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        .btn-submit {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .btn-submit:hover {
-            background-color: #0056b3;
-        }
-        .profesor-actions {
+        .acciones-modal {
             display: flex;
-            gap: 10px;
-            margin-top: 5px;
+            gap: 12px;
+            margin-top: 18px;
+            justify-content: flex-end;
         }
-        .profesor-actions .btn-action {
-            flex: 1;
-            padding: 8px 12px;
-            font-size: 12px;
+        .acciones-modal button {
+            border: none;
+            border-radius: 7px;
+            padding: 11px 28px;
+            font-size: 1.08em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.18s;
         }
-        select:disabled {
-            background-color: #f5f5f5;
-            color: #666;
-            cursor: not-allowed;
+        .acciones-modal .btn-edit {
+            background: #ffc107;
+            color: #222;
         }
-        /* Modal de profesor: unificado y profesional */
-        #modal-profesor {
+        .acciones-modal .btn-edit:hover {
+            background: #ffb300;
+        }
+        .acciones-modal button[type="button"] {
+            background: #f5f5f5;
+            color: #222;
+            border: 1px solid #b0c4de;
+        }
+        .acciones-modal button[type="button"]:hover {
+            background: #e3eefd;
+        }
+        .back-button {
+            display: block;
+            margin: 36px auto 0 auto;
+            max-width: 350px;
+            background: #6c757d;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 7px;
+            padding: 15px 0;
+            font-size: 1.13em;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: background 0.18s;
+        }
+        .back-button:hover {
+            background: #495057;
+        }
+        @media (max-width: 900px) {
+            .form-container { padding: 18px 2vw; }
+        }
+        @media (max-width: 600px) {
+            .form-container { max-width: 100vw; border-radius: 0; box-shadow: none; padding: 8vw 2vw; }
+        }
+        .mensaje-estado {
+            padding: 14px 18px;
+            border-radius: 7px;
+            font-size: 1.08em;
+            margin-bottom: 22px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .mensaje-estado.error {
+            background: #ffeaea;
+            color: #b71c1c;
+            border: 1.5px solid #dc3545;
+        }
+        .mensaje-estado.success {
+            background: #e3fcec;
+            color: #1b5e20;
+            border: 1.5px solid #28a745;
+        }
+        #modal {
             display: none;
             position: fixed;
-            z-index: 2000;
+            z-index: 2100;
             left: 0; top: 0; width: 100vw; height: 100vh;
             background: rgba(0,0,0,0.25);
             align-items: center;
             justify-content: center;
         }
-        #modal-profesor .modal-content {
+        #modal .modal-content {
             background: #fff;
             padding: 32px 28px 24px 28px;
             border-radius: 14px;
@@ -319,18 +342,18 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
             margin: 0 auto;
             position: relative;
         }
-        #modal-profesor h3 {
+        #modal h3 {
             margin-top: 0;
             font-size: 1.5em;
             color: #1a237e;
             font-weight: 700;
             margin-bottom: 18px;
         }
-        #modal-profesor .form-group label {
+        #modal .form-group label {
             font-weight: 600;
             color: #222;
         }
-        #modal-profesor .form-group input {
+        #modal .form-group input, #modal .form-group select {
             width: 100%;
             padding: 9px 10px;
             border: 1px solid #b0c4de;
@@ -339,41 +362,64 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
             margin-bottom: 8px;
             background: #f7faff;
         }
-        #modal-profesor .acciones-modal {
+        #modal .acciones-modal, #modal-form .acciones-modal {
             display: flex;
-            gap: 10px;
-            margin-top: 10px;
+            gap: 12px;
+            margin-top: 18px;
+            justify-content: flex-end;
         }
-        #modal-profesor .acciones-modal button {
+        #modal .acciones-modal button, #modal-form .acciones-modal button, #modal-form button[type='submit'] {
             border: none;
-            border-radius: 6px;
-            padding: 9px 22px;
-            font-size: 1em;
-            font-weight: 600;
+            border-radius: 7px;
+            padding: 11px 28px;
+            font-size: 1.08em;
+            font-weight: 700;
             cursor: pointer;
             transition: background 0.18s;
         }
-        #modal-profesor .acciones-modal .btn-edit {
+        #modal .acciones-modal .btn-edit, #modal-form .acciones-modal .btn-edit, #modal-form button[type='submit'] {
             background: #ffc107;
             color: #222;
         }
-        #modal-profesor .acciones-modal .btn-edit:hover {
+        #modal .acciones-modal .btn-edit:hover, #modal-form .acciones-modal .btn-edit:hover, #modal-form button[type='submit']:hover {
             background: #ffb300;
         }
-        #modal-profesor .acciones-modal button[type="button"] {
+        #modal .acciones-modal button[type="button"], #modal-form .acciones-modal button[type="button"] {
             background: #f5f5f5;
             color: #222;
             border: 1px solid #b0c4de;
         }
-        #modal-profesor .acciones-modal button[type="button"]:hover {
+        #modal .acciones-modal button[type="button"]:hover, #modal-form .acciones-modal button[type="button"]:hover {
             background: #e3eefd;
+        }
+        #modal .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            position: absolute;
+            right: 18px;
+            top: 10px;
+        }
+        #modal .close:hover {
+            color: #1a237e;
         }
     </style>
 </head>
 <body>
-    <a href="profesores.php" target="_blank" class="icono-profesores" title="Ver Profesores" style="position: fixed; top: 40px; right: 30px; background: #007bff; color: #fff; border-radius: 50%; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; font-size: 2em; box-shadow: 0 2px 8px rgba(0,0,0,0.12); z-index: 2100; cursor: pointer; text-decoration: none;">
-        👨‍🏫
-    </a>
+    <!-- Iconos apilados a la derecha como links -->
+    <div style="position: absolute; top: 32px; right: 48px; display: flex; flex-direction: column; align-items: center; gap: 18px; z-index: 10;">
+        <a href="materias.php" style="text-decoration: none;">
+            <div style="width: 70px; height: 70px; background: #0074ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+                <span style="font-size: 38px;">📚</span>
+            </div>
+        </a>
+        <a href="profesores.php" style="text-decoration: none;">
+            <div style="width: 70px; height: 70px; background: #0074ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+            <span style="font-size: 38px;">👨‍🏫</span>            </div>
+        </a>
+    </div>
     <div class="form-container">
         <h2><?php echo $form_title; ?></h2>
         <form action="añadir_aula.php" method="POST">
@@ -424,13 +470,10 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
                 </div>
             </div>
 
-            <!-- Eliminar el select de profesor aquí -->
-
-            <!-- Al final del formulario: Materia y campos de solo lectura -->
             <div class="form-group">
                 <label for="materia_id">Materia:</label>
                 <div class="select-container">
-                    <select id="materia_id" name="materia_id" required>
+                    <select id="materia_id" name="materia_id" required onchange="mostrarInfoMateria()">
                         <option value="">Seleccione una materia</option>
                         <?php $materias_options->data_seek(0); while ($row = $materias_options->fetch_assoc()): 
                             $nombre = $row['nombre'];
@@ -461,7 +504,7 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
                             }
                             $label = $nombre . ($info ? ' (' . $info . ')' : '');
                         ?>
-                        <option value="<?php echo $row['id_materia']; ?>"><?php echo htmlspecialchars($label); ?></option>
+                        <option value="<?php echo $row['id_materia']; ?>" data-carrera="<?php echo isset($row['carrera_id']) ? $row['carrera_id'] : ''; ?>" data-curso="<?php echo isset($row['curso_pre_admision_id']) ? $row['curso_pre_admision_id'] : ''; ?>"><?php echo htmlspecialchars($label); ?></option>
                         <?php endwhile; ?>
                     </select>
                     <button type="button" class="btn-action btn-add" onclick="openModal('materia')">+</button>
@@ -469,66 +512,24 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
                     <button type="button" class="btn-action btn-delete" onclick="deleteItem('materia')">🗑️</button>
                 </div>
             </div>
+
+            <!-- Campos de solo lectura que aparecen al seleccionar materia -->
             <div class="form-group" id="carrera_group" style="display:none;">
                 <label id="carrera_label" for="carrera_readonly">Carrera:</label>
-                <input type="text" id="carrera_readonly" readonly style="background:#f5f5f5;">
+                <input type="text" id="carrera_readonly" readonly style="background:#f8f9fa; border: 1.5px solid #e9ecef; color: #495057; font-weight: 500;">
             </div>
             <div class="form-group" id="curso_group" style="display:none;">
                 <label for="curso_readonly">Curso Pre-Admisión:</label>
-                <input type="text" id="curso_readonly" readonly style="background:#f5f5f5;">
-            </div>
-            <div class="form-group" id="diplomatura_group" style="display:none;">
-                <label for="diplomatura_readonly">Diplomatura:</label>
-                <input type="text" id="diplomatura_readonly" readonly style="background:#f5f5f5;">
+                <input type="text" id="curso_readonly" readonly style="background:#f8f9fa; border: 1.5px solid #e9ecef; color: #495057; font-weight: 500;">
             </div>
             <div class="form-group" id="profesor_group" style="display:none;">
                 <label for="profesor_readonly">Profesor:</label>
                 <div class="select-container" style="display: flex; align-items: center; gap: 10px; padding: 0; background: none;">
-                    <input type="text" id="profesor_readonly" readonly style="background:#f5f5f5; flex:1; min-width:0;">
-                    <button type="button" id="btn-add-profesor" class="btn-action btn-add" style="width:40px;" onclick="abrirModalProfesor()">+</button>
-                    <button type="button" id="btn-select-profesor" class="btn-action btn-edit" style="display:none; width:40px;" onclick="openSelectProfesorModal()">🔍</button>
-                    <button type="button" id="btn-edit-profesor" class="btn-action btn-edit" style="display:none; width:40px;" onclick="editModal('profesor')">✏️</button>
-                    <button type="button" id="btn-delete-profesor" class="btn-action btn-delete" style="display:none; width:40px;" onclick="removeProfesorMain()">🗑️</button>
-                </div>
-            </div>
-
-            <!-- Modal para seleccionar profesor existente -->
-            <div id="selectProfesorModal" class="modal">
-                <div class="modal-content">
-                    <span class="close" onclick="closeSelectProfesorModal()">&times;</span>
-                    <h3>Seleccionar Profesor</h3>
-                    <div id="profesores-list">
-                        <!-- Aquí se cargará la lista de profesores -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal para agregar profesor -->
-            <div class="modal" id="modal-profesor">
-                <div class="modal-content">
-                    <h3 id="modal-titulo-prof">Agregar Profesor</h3>
-                    <form id="form-profesor">
-                        <div class="form-group">
-                            <label>Nombre:</label>
-                            <input type="text" name="nombre" id="modal-nombre-prof" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Apellido:</label>
-                            <input type="text" name="apellido" id="modal-apellido-prof" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Correo:</label>
-                            <input type="email" name="correo" id="modal-correo-prof" placeholder="dejar vacío en caso de no tener/usar">
-                        </div>
-                        <div class="form-group">
-                            <label>Teléfono:</label>
-                            <input type="text" name="telefono" id="modal-telefono-prof" placeholder="dejar vacío en caso de no tener/usar">
-                        </div>
-                        <div class="acciones-modal">
-                            <button type="submit" class="btn-edit">Guardar</button>
-                            <button type="button" onclick="cerrarModalProfesor()">Cancelar</button>
-                        </div>
-                    </form>
+                    <input type="text" id="profesor_readonly" readonly style="background:#f8f9fa; border: 1.5px solid #e9ecef; color: #495057; font-weight: 500; flex:1; min-width:0;">
+                    <button type="button" id="btn-add-profesor" class="btn-action btn-add" style="width:44px; height:44px;" onclick="abrirModalProfesor()" title="Agregar Profesor">+</button>
+                    <button type="button" id="btn-select-profesor" class="btn-action btn-edit" style="display:none; width:44px; height:44px;" onclick="openSelectProfesorModal()" title="Seleccionar Profesor">🔍</button>
+                    <button type="button" id="btn-edit-profesor" class="btn-action btn-edit" style="display:none; width:44px; height:44px;" onclick="editModal('profesor')" title="Editar Profesor">✏️</button>
+                    <button type="button" id="btn-remove-profesor" class="btn-action btn-delete" style="display:none; width:44px; height:44px;" onclick="removeProfesorFromMateria()" title="Desasignar Profesor">🚫</button>
                 </div>
             </div>
 
@@ -537,6 +538,47 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
             </div>
         </form>
         <a href="disposicionaulica.php" class="back-button">Volver al Listado</a>
+    </div>
+
+    <!-- Modal para agregar profesor -->
+    <div class="modal" id="modal-profesor">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarModalProfesor()">&times;</span>
+            <h3 id="modal-titulo-prof">Agregar Profesor</h3>
+            <form id="form-profesor">
+                <div class="form-group">
+                    <label>Nombre:</label>
+                    <input type="text" name="nombre" id="modal-nombre-prof" required>
+                </div>
+                <div class="form-group">
+                    <label>Apellido:</label>
+                    <input type="text" name="apellido" id="modal-apellido-prof" required>
+                </div>
+                <div class="form-group">
+                    <label>Correo:</label>
+                    <input type="email" name="correo" id="modal-correo-prof" placeholder="dejar vacío en caso de no tener/usar">
+                </div>
+                <div class="form-group">
+                    <label>Teléfono:</label>
+                    <input type="text" name="telefono" id="modal-telefono-prof" placeholder="dejar vacío en caso de no tener/usar">
+                </div>
+                <div class="acciones-modal">
+                    <button type="submit" class="btn-edit">Guardar</button>
+                    <button type="button" onclick="cerrarModalProfesor()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para seleccionar profesor existente -->
+    <div id="selectProfesorModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeSelectProfesorModal()">&times;</span>
+            <h3>Seleccionar Profesor</h3>
+            <div id="profesores-list">
+                <!-- Aquí se cargará la lista de profesores -->
+            </div>
+        </div>
     </div>
 
     <!-- Modal para agregar/editar -->
@@ -570,6 +612,116 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
         });
     });
 
+    // Funciones para los botones de profesor
+    function abrirModalProfesor() {
+        document.getElementById('modal-titulo-prof').textContent = 'Agregar Profesor';
+        document.getElementById('modal-nombre-prof').value = '';
+        document.getElementById('modal-apellido-prof').value = '';
+        document.getElementById('modal-correo-prof').value = '';
+        document.getElementById('modal-telefono-prof').value = '';
+        document.getElementById('modal-profesor').style.display = 'flex';
+        // Asegurar que el modal esté centrado
+        document.getElementById('modal-profesor').style.alignItems = 'center';
+        document.getElementById('modal-profesor').style.justifyContent = 'center';
+    }
+
+    function cerrarModalProfesor() {
+        document.getElementById('modal-profesor').style.display = 'none';
+    }
+
+    function openSelectProfesorModal() {
+        // Cargar lista de profesores directamente desde get_item_data.php
+        $.ajax({
+            url: 'get_item_data.php',
+            type: 'POST',
+            data: { type: 'all_profesores' },
+            success: function(response) {
+                try {
+                    const profesores = JSON.parse(response);
+                    let html = '<div style="max-height: 300px; overflow-y: auto;">';
+                    if (profesores.length > 0) {
+                        profesores.forEach(function(prof) {
+                            html += '<div class="profesor-row" onclick="asignarProfesorAMateria(' + prof.id_profesor + ', \'' + prof.nombre + ' ' + prof.apellido + '\')">';
+                            html += '<span class="profesor-nombre">' + prof.nombre + ' ' + prof.apellido + '</span>';
+                            html += '<button type="button" class="btn-select-profesor" onclick="event.stopPropagation(); asignarProfesorAMateria(' + prof.id_profesor + ', \'' + prof.nombre + ' ' + prof.apellido + '\')">Seleccionar</button>';
+                            html += '</div>';
+                        });
+                    } else {
+                        html += '<div style="padding: 20px; text-align: center; color: #666;">No hay profesores registrados.</div>';
+                    }
+                    html += '</div>';
+                    $('#profesores-list').html(html);
+                    $('#selectProfesorModal').css('display', 'flex');
+                } catch (e) {
+                    $('#profesores-list').html('<div style="padding: 20px; text-align: center; color: #666;">Error al cargar profesores.</div>');
+                    $('#selectProfesorModal').css('display', 'flex');
+                }
+            },
+            error: function() {
+                $('#profesores-list').html('<div style="padding: 20px; text-align: center; color: #666;">Error al cargar profesores.</div>');
+                $('#selectProfesorModal').css('display', 'flex');
+            }
+        });
+    }
+
+    function asignarProfesorAMateria(profesorId, profesorNombre) {
+        var materiaId = $('#materia_id').val();
+        if (!materiaId) {
+            alert('Por favor seleccione una materia primero');
+            return;
+        }
+        
+        $.ajax({
+            url: 'asignar_profesor.php',
+            type: 'POST',
+            data: { 
+                materia_id: materiaId,
+                profesor_id: profesorId
+            },
+            success: function(response) {
+                try {
+                    const result = JSON.parse(response);
+                    if (result.success) {
+                        $('#profesor_readonly').val(profesorNombre);
+                        $('#btn-add-profesor').hide();
+                        $('#btn-select-profesor').hide();
+                        $('#btn-edit-profesor').show();
+                        $('#btn-remove-profesor').show();
+                        closeSelectProfesorModal();
+                    } else {
+                        alert('Error: ' + (result.message || 'No se pudo asignar el profesor'));
+                    }
+                } catch (e) {
+                    alert('Error al asignar profesor');
+                }
+            },
+            error: function() {
+                alert('Error al asignar profesor');
+            }
+        });
+    }
+
+    function closeSelectProfesorModal() {
+        document.getElementById('selectProfesorModal').style.display = 'none';
+    }
+
+    function removeProfesorMain() {
+        if (confirm('¿Está seguro de eliminar el profesor de esta materia?')) {
+            var materiaId = $('#materia_id').val();
+            $.ajax({
+                url: 'remove_profesor.php',
+                type: 'POST',
+                data: { materia_id: materiaId },
+                success: function(response) {
+                    mostrarInfoMateria(); // Recargar información
+                },
+                error: function() {
+                    alert('Error al eliminar profesor');
+                }
+            });
+        }
+    }
+
     function openModal(type) {
         document.getElementById('modal-type').value = type;
         document.getElementById('modal-id').value = '';
@@ -586,9 +738,7 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
             case 'materia':
                 fields = '<div class="form-group"><label>Nombre:</label><input type="text" name="nombre" required></div>' +
                         '<div class="form-group"><label>Carrera:</label><select name="carrera_id" disabled><option value="">Seleccione una carrera</option><?php $carreras_options->data_seek(0); while ($row = $carreras_options->fetch_assoc()): ?><option value="<?php echo $row["id_carrera"]; ?>"><?php echo htmlspecialchars($row["nombre"]); ?></option><?php endwhile; ?></select></div>' +
-                        '<div class="form-group"><label>Curso Pre-Admisión:</label><select name="curso_pre_admision_id" disabled><option value="">Seleccione un curso</option><?php $cursos_pre_admision_options->data_seek(0); while ($row = $cursos_pre_admision_options->fetch_assoc()): ?><option value="<?php echo $row["id_curso_pre_admision"]; ?>"><?php echo htmlspecialchars($row["nombre_curso"]); ?></option><?php endwhile; ?></select></div>' +
-                        '<div class="form-group"><label>Profesor:</label><select name="profesor_id" disabled><option value="">Se debe asignar un profesor</option><?php $profesores_options->data_seek(0); while ($row = $profesores_options->fetch_assoc()): ?><option value="<?php echo $row["id_profesor"]; ?>"><?php echo htmlspecialchars($row["nombre"] . " " . $row["apellido"]); ?></option><?php endwhile; ?></select></div>' +
-                        '<div class="form-group"><label>Acciones Profesor:</label><div class="profesor-actions"><button type="button" class="btn-action btn-edit" onclick="editProfesor()">✏️ Editar</button><button type="button" class="btn-action btn-delete" onclick="removeProfesor()">🗑️ Eliminar</button></div></div>';
+                        '<div class="form-group"><label>Curso Pre-Admisión:</label><select name="curso_pre_admision_id" disabled><option value="">Seleccione un curso</option><?php $cursos_pre_admision_options->data_seek(0); while ($row = $cursos_pre_admision_options->fetch_assoc()): ?><option value="<?php echo $row["id_curso_pre_admision"]; ?>"><?php echo htmlspecialchars($row["nombre_curso"]); ?></option><?php endwhile; ?></select></div>';
                 break;
             case 'aula':
                 fields = '<div class="form-group"><label>Número:</label><input type="text" name="numero" required></div>' +
@@ -603,29 +753,79 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
                 break;
         }
         
-                        document.getElementById('modal-fields').innerHTML = fields;
-                
-                // Aplicar lógica de bloqueo mutuo para materias
-                if (type === 'materia') {
-                    setTimeout(function() {
-                        setupMateriaFieldLogic();
-                    }, 100);
-                }
-                
-                document.getElementById('modal').style.display = 'block';
+        document.getElementById('modal-fields').innerHTML = fields;
+        
+        // Aplicar lógica de bloqueo mutuo para materias
+        if (type === 'materia') {
+            setTimeout(function() {
+                setupMateriaFieldLogic();
+            }, 100);
+        }
+        
+        document.getElementById('modal').style.display = 'flex';
     }
 
     function editModal(type) {
-        const select = document.getElementById(type + '_id');
-        const selectedOption = select.options[select.selectedIndex];
+        let select;
         
+        // Caso especial para profesor - no tiene select en el formulario principal
+        if (type === 'profesor') {
+            // Para profesor, necesitamos obtener el ID del profesor de la materia seleccionada
+            const materiaSelect = document.getElementById('materia_id');
+            if (!materiaSelect || !materiaSelect.value) {
+                alert('Por favor seleccione una materia primero para editar su profesor');
+                return;
+            }
+            
+            // Obtener el profesor de la materia seleccionada via AJAX
+            $.ajax({
+                url: 'get_item_data.php',
+                type: 'POST',
+                data: {
+                    type: 'materia',
+                    id: materiaSelect.value
+                },
+                success: function(response) {
+                    try {
+                        const data = JSON.parse(response);
+                        if (data.profesor_id && data.profesor_id !== null) {
+                            // Si la materia tiene profesor, proceder con la edición
+                            proceedWithEdit(type, data.profesor_id);
+                        } else {
+                            alert('Esta materia no tiene un profesor asignado para editar');
+                        }
+                    } catch (e) {
+                        alert('Error al obtener datos de la materia');
+                    }
+                },
+                error: function() {
+                    alert('Error al obtener datos de la materia');
+                }
+            });
+            return;
+        }
+        
+        // Para otros tipos, buscar el select correspondiente
+        select = document.getElementById(type + '_id');
+        
+        // Verificar si el select existe
+        if (!select) {
+            alert('No se encontró el elemento para editar');
+            return;
+        }
+        
+        // Verificar si hay un valor seleccionado
         if (!select.value) {
             alert('Por favor seleccione un elemento para editar');
             return;
         }
         
+        proceedWithEdit(type, select.value);
+    }
+    
+    function proceedWithEdit(type, id) {
         document.getElementById('modal-type').value = type;
-        document.getElementById('modal-id').value = select.value;
+        document.getElementById('modal-id').value = id;
         document.getElementById('modal-title').textContent = 'Editar ' + getTypeName(type);
         
         // Cargar datos actuales via AJAX
@@ -634,7 +834,7 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
             type: 'POST',
             data: {
                 type: type,
-                id: select.value
+                id: id
             },
             success: function(response) {
                 const data = JSON.parse(response);
@@ -650,9 +850,7 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
                     case 'materia':
                         fields = '<div class="form-group"><label>Nombre:</label><input type="text" name="nombre" id="modal-materia-nombre" value="' + (data.nombre ? data.nombre : '') + '" required></div>' +
                                 '<div class="form-group"><label>Carrera:</label><select name="carrera_id" disabled><option value="">Seleccione una carrera</option><?php $carreras_options->data_seek(0); while ($row = $carreras_options->fetch_assoc()): ?><option value="<?php echo $row["id_carrera"]; ?>"><?php echo htmlspecialchars($row["nombre"]); ?></option><?php endwhile; ?></select></div>' +
-                                '<div class="form-group"><label>Curso Pre-Admisión:</label><select name="curso_pre_admision_id" disabled><option value="">Seleccione un curso</option><?php $cursos_pre_admision_options->data_seek(0); while ($row = $cursos_pre_admision_options->fetch_assoc()): ?><option value="<?php echo $row["id_curso_pre_admision"]; ?>"><?php echo htmlspecialchars($row["nombre_curso"]); ?></option><?php endwhile; ?></select></div>' +
-                                '<div class="form-group"><label>Profesor:</label><select name="profesor_id" disabled><option value="">Se debe asignar un profesor</option><?php $profesores_options->data_seek(0); while ($row = $profesores_options->fetch_assoc()): ?><option value="<?php echo $row["id_profesor"]; ?>"><?php echo htmlspecialchars($row["nombre"] . " " . $row["apellido"]); ?></option><?php endwhile; ?></select></div>' +
-                                '<div class="form-group"><label>Acciones Profesor:</label><div class="profesor-actions"><button type="button" class="btn-action btn-edit" onclick="editProfesor()">✏️ Editar</button><button type="button" class="btn-action btn-delete" onclick="removeProfesor()">🗑️ Eliminar</button></div></div>';
+                                '<div class="form-group"><label>Curso Pre-Admisión:</label><select name="curso_pre_admision_id" disabled><option value="">Seleccione un curso</option><?php $cursos_pre_admision_options->data_seek(0); while ($row = $cursos_pre_admision_options->fetch_assoc()): ?><option value="<?php echo $row["id_curso_pre_admision"]; ?>"><?php echo htmlspecialchars($row["nombre_curso"]); ?></option><?php endwhile; ?></select></div>';
                         break;
                     case 'aula':
                         fields = '<div class="form-group"><label>Número:</label><input type="text" name="numero" value="' + data.numero + '" required></div>' +
@@ -660,10 +858,10 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
                                 '<div class="form-group"><label>Cantidad:</label><input type="number" name="cantidad" value="' + data.cantidad + '" required></div>';
                         break;
                     case 'profesor':
-                        fields = '<div class="form-group"><label>Nombre:</label><input type="text" name="nombre" value="' + data.nombre + '" required></div>' +
-                                '<div class="form-group"><label>Apellido:</label><input type="text" name="apellido" value="' + data.apellido + '" required></div>' +
-                                '<div class="form-group"><label>Correo:</label><input type="email" name="correo" value="' + data.correo + '" required></div>' +
-                                '<div class="form-group"><label>Teléfono:</label><input type="tel" name="telefono" value="' + data.telefono + '" required></div>';
+                        fields = '<div class="form-group"><label>Nombre:</label><input type="text" name="nombre" value="' + (data.nombre || '') + '" required></div>' +
+                                '<div class="form-group"><label>Apellido:</label><input type="text" name="apellido" value="' + (data.apellido || '') + '" required></div>' +
+                                '<div class="form-group"><label>Correo:</label><input type="email" name="correo" value="' + (data.correo || '') + '" placeholder="dejar vacío en caso de no tener/usar"></div>' +
+                                '<div class="form-group"><label>Teléfono:</label><input type="text" name="telefono" value="' + (data.telefono || '') + '" placeholder="dejar vacío en caso de no tener/usar"></div>';
                         break;
                 }
                 
@@ -725,7 +923,7 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
                     }, 100);
                 }
                 
-                document.getElementById('modal').style.display = 'block';
+                document.getElementById('modal').style.display = 'flex';
             },
             error: function() {
                 alert('Error al cargar los datos');
@@ -826,14 +1024,6 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
         });
     });
 
-    // Cerrar modal al hacer clic fuera de él
-    window.onclick = function(event) {
-        const modal = document.getElementById('modal');
-        if (event.target == modal) {
-            closeModal();
-        }
-    }
-
     // Función para manejar la lógica de bloqueo mutuo entre carrera y curso pre-admisión
     function setupMateriaFieldLogic() {
         const carreraSelect = document.querySelector('select[name="carrera_id"]');
@@ -900,152 +1090,87 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
     }
 
     // Al cambiar la materia, actualizar los campos de solo lectura
-    $(document).ready(function() {
-        $('#materia_id').on('change', function() {
-            var materiaId = $(this).val();
-            // Ocultar todos los campos de solo lectura al cambiar
-            $('#carrera_group').hide();
-            $('#curso_group').hide();
-            $('#diplomatura_group').hide();
-            $('#profesor_group').hide();
-            $('#btn-add-profesor').hide();
-            $('#btn-edit-profesor').hide();
-            $('#btn-delete-profesor').hide();
-            $('#btn-select-profesor').hide();
-            if (materiaId) {
-                $.ajax({
-                    url: 'get_item_data.php',
-                    type: 'POST',
-                    data: { type: 'materia', id: materiaId },
-                    success: function(response) {
-                        var data = JSON.parse(response);
-                        // Mostrar solo el campo correspondiente
-                        if (data.carrera_id && data.carrera_id !== 'null') {
-                            $.ajax({
-                                url: 'get_item_data.php',
-                                type: 'POST',
-                                data: { type: 'carrera', id: data.carrera_id },
-                                success: function(resp2) {
-                                    var carrera = JSON.parse(resp2);
-                                    // Si el nombre contiene 'Diplomatura', mostrar como diplomatura
-                                    if (carrera.nombre && carrera.nombre.toLowerCase().includes('diplomatura')) {
-                                        $('#carrera_label').text('Diplomatura:');
-                                    } else {
-                                        $('#carrera_label').text('Carrera:');
-                                    }
-                                    $('#carrera_readonly').val(carrera.nombre);
-                                    $('#carrera_group').show();
-                                }
-                            });
-                        } else if (data.curso_pre_admision_id && data.curso_pre_admision_id !== 'null') {
-                            $.ajax({
-                                url: 'get_item_data.php',
-                                type: 'POST',
-                                data: { type: 'curso_pre_admision', id: data.curso_pre_admision_id },
-                                success: function(resp3) {
-                                    var curso = JSON.parse(resp3);
-                                    $('#curso_readonly').val(curso.nombre_curso);
-                                    $('#curso_group').show();
-                                }
-                            });
-                        } else if (data.carrera_id === null && data.curso_pre_admision_id === null && data.diplomatura_id && data.diplomatura_id !== 'null') {
-                            // Si tiene diplomatura
-                            $.ajax({
-                                url: 'get_item_data.php',
-                                type: 'POST',
-                                data: { type: 'diplomatura', id: data.diplomatura_id },
-                                success: function(resp4) {
-                                    var diplo = JSON.parse(resp4);
-                                    $('#diplomatura_readonly').val(diplo.nombre);
-                                    $('#diplomatura_group').show();
-                                }
-                            });
-                        }
-                        // Profesor (siempre mostrar si hay materia)
-                        if (data.profesor_id && data.profesor_id !== 'null') {
-                            $.ajax({
-                                url: 'get_item_data.php',
-                                type: 'POST',
-                                data: { type: 'profesor', id: data.profesor_id },
-                                success: function(resp5) {
-                                    var profe = JSON.parse(resp5);
-                                    $('#profesor_readonly').val(profe.nombre + ' ' + profe.apellido);
-                                    $('#profesor_group').show();
-                                    $('#btn-add-profesor').hide();
-                                    $('#btn-edit-profesor').show();
-                                    $('#btn-delete-profesor').show();
-                                    $('#btn-select-profesor').hide();
-                                }
-                            });
-                        } else {
-                            $('#profesor_readonly').val('Se debe asignar un profesor');
-                            $('#profesor_group').show();
-                            $('#btn-add-profesor').show();
-                            $('#btn-edit-profesor').hide();
-                            $('#btn-delete-profesor').hide();
-                            $('#btn-select-profesor').show();
-                        }
+    function mostrarInfoMateria() {
+        var materiaId = $('#materia_id').val();
+        var carreraId = $('#materia_id').find('option:selected').data('carrera');
+        var cursoId = $('#materia_id').find('option:selected').data('curso');
+
+        // Ocultar todos los campos de solo lectura al cambiar
+        $('#carrera_group').hide();
+        $('#curso_group').hide();
+        $('#profesor_group').hide();
+        $('#btn-add-profesor').hide();
+        $('#btn-edit-profesor').hide();
+        $('#btn-remove-profesor').hide(); // Ocultar botón de desasignar
+        $('#btn-select-profesor').hide();
+
+        if (materiaId) {
+            $.ajax({
+                url: 'get_item_data.php',
+                type: 'POST',
+                data: {
+                    type: 'materia',
+                    id: materiaId
+                },
+                success: function(response) {
+                    const data = JSON.parse(response);
+                    
+                    // Mostrar información de carrera o curso pre-admisión
+                    if (data.carrera_id && data.carrera_id !== null) {
+                        $('#carrera_readonly').val(data.carrera_nombre);
+                        $('#carrera_group').show();
+                    } else if (data.curso_pre_admision_id && data.curso_pre_admision_id !== null) {
+                        $('#curso_readonly').val(data.curso_pre_admision_nombre);
+                        $('#curso_group').show();
                     }
-                });
-            } else {
-                $('#carrera_readonly').val('');
-                $('#curso_readonly').val('');
-                $('#diplomatura_readonly').val('');
-                $('#profesor_readonly').val('Se debe asignar un profesor');
-                $('#btn-add-profesor').hide();
-                $('#btn-edit-profesor').hide();
-                $('#btn-delete-profesor').hide();
-                $('#btn-select-profesor').hide();
-            }
-        });
-        // Disparar el evento al cargar la página si ya hay materia seleccionada
-        $('#materia_id').trigger('change');
+                    
+                    // Mostrar información del profesor
+                    if (data.profesor_id && data.profesor_id !== null) {
+                        $('#profesor_readonly').val(data.profesor_nombre + ' ' + data.profesor_apellido);
+                        $('#profesor_group').show();
+                        $('#btn-edit-profesor').show();
+                        $('#btn-remove-profesor').show(); // Mostrar botón de desasignar
+                    } else {
+                        $('#profesor_readonly').val('Sin profesor asignado');
+                        $('#profesor_group').show();
+                        $('#btn-add-profesor').show();
+                        $('#btn-select-profesor').show();
+                        $('#btn-remove-profesor').hide(); // Ocultar botón de desasignar
+                    }
+                },
+                error: function() {
+                    console.log('Error al cargar información de la materia');
+                }
+            });
+        }
+    }
+
+    // Disparar la función al cargar la página si ya hay materia seleccionada
+    $(document).ready(function() {
+        if ($('#materia_id').val()) {
+            mostrarInfoMateria();
+        }
     });
 
     // Eliminar profesor desde el formulario principal
-    function removeProfesorMain() {
-        var materiaId = $('#materia_id').val();
-        if (!materiaId) return;
-        if (confirm('¿Está seguro de que desea eliminar el profesor asignado a esta materia?')) {
+    function removeProfesorFromMateria() {
+        if (confirm('¿Está seguro de que desea desasignar el profesor de esta materia?')) {
+            var materiaId = $('#materia_id').val();
             $.ajax({
-                url: 'save_item.php',
+                url: 'remove_profesor.php',
                 type: 'POST',
-                data: { type: 'materia', id: materiaId, profesor_id: '' },
-                success: function(resp) {
-                    $('#materia_id').trigger('change');
+                data: { materia_id: materiaId },
+                success: function(response) {
+                    mostrarInfoMateria(); // Recargar información
+                },
+                error: function() {
+                    alert('Error al desasignar profesor');
                 }
             });
         }
     }
 
     // Función para abrir el modal de selección de profesor
-    function openSelectProfesorModal() {
-        // Cargar la lista de profesores existentes vía AJAX
-        $.ajax({
-            url: 'get_item_data.php',
-            type: 'POST',
-            data: { type: 'all_profesores', id: 0 },
-            success: function(response) {
-                var data = JSON.parse(response);
-                var html = '';
-                if (data.length > 0) {
-                    data.forEach(function(prof) {
-                        html += '<div class="profesor-row" onclick="asignarProfesorExistente(' + prof.id_profesor + ', \'' + prof.nombre + ' ' + prof.apellido + '\')">'
-                            + '<span class="profesor-nombre">' + prof.nombre + ' ' + prof.apellido + '</span>'
-                            + '<button type="button" class="btn-select-profesor" onclick="event.stopPropagation(); asignarProfesorExistente(' + prof.id_profesor + ', \'' + prof.nombre + ' ' + prof.apellido + '\')">Seleccionar</button>'
-                            + '</div>';
-                    });
-                } else {
-                    html += '<div style="padding:10px;">No hay profesores registrados.</div>';
-                }
-                $('#profesores-list').html(html);
-                $('#selectProfesorModal').show();
-            }
-        });
-    }
-    function closeSelectProfesorModal() {
-        $('#selectProfesorModal').hide();
-    }
     function asignarProfesorExistente(id, nombre) {
         var materiaId = $('#materia_id').val();
         if (!materiaId) return;
@@ -1060,34 +1185,64 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
         });
     }
 
-    // Abrir modal de profesor desde el botón +
-    function abrirModalProfesor() {
-        document.getElementById('modal-titulo-prof').textContent = 'Agregar Profesor';
-        var form = document.getElementById('form-profesor');
-        if (form) form.reset();
-        document.getElementById('modal-profesor').style.display = 'flex';
-    }
-    function cerrarModalProfesor() {
-        document.getElementById('modal-profesor').style.display = 'none';
-    }
     // Guardar profesor vía AJAX y actualizar select
     $('#form-profesor').on('submit', function(e) {
         e.preventDefault();
-        var datos = $(this).serialize() + '&action=add';
-        $.post('profesores.php', datos, function() {
-            // Actualizar el select de profesores
-            $.get('get_item_data.php', { type: 'all_profesores', id: 0 }, function(data) {
-                var profs = JSON.parse(data);
-                var $select = $('#profesor_id');
-                if ($select.length) {
-                    $select.empty();
-                    $select.append('<option value="">Seleccione un profesor</option>');
-                    profs.forEach(function(p) {
-                        $select.append('<option value="' + p.id_profesor + '">' + p.nombre + ' ' + p.apellido + '</option>');
-                    });
+        var formData = $(this).serialize();
+        
+        $.ajax({
+            url: 'save_profesor.php',
+            type: 'POST',
+            data: formData,
+            success: function(response) {
+                try {
+                    const result = JSON.parse(response);
+                    if (result.success) {
+                        // Asignar automáticamente el profesor a la materia
+                        var materiaId = $('#materia_id').val();
+                        if (materiaId) {
+                            $.ajax({
+                                url: 'asignar_profesor.php',
+                                type: 'POST',
+                                data: { 
+                                    materia_id: materiaId,
+                                    profesor_id: result.profesor_id
+                                },
+                                success: function(resp) {
+                                    try {
+                                        const asignacion = JSON.parse(resp);
+                                        if (asignacion.success) {
+                                            $('#profesor_readonly').val(result.nombre + ' ' + result.apellido);
+                                            $('#btn-add-profesor').hide();
+                                            $('#btn-select-profesor').hide();
+                                            $('#btn-edit-profesor').show();
+                                            $('#btn-remove-profesor').show();
+                                            cerrarModalProfesor();
+                                        }
+                                    } catch (e) {
+                                        cerrarModalProfesor();
+                                        location.reload();
+                                    }
+                                },
+                                error: function() {
+                                    cerrarModalProfesor();
+                                    location.reload();
+                                }
+                            });
+                        } else {
+                            cerrarModalProfesor();
+                            location.reload();
+                        }
+                    } else {
+                        alert('Error: ' + (result.message || 'No se pudo guardar el profesor'));
+                    }
+                } catch (e) {
+                    alert('Error al guardar profesor');
                 }
-            });
-            cerrarModalProfesor();
+            },
+            error: function() {
+                alert('Error al guardar profesor');
+            }
         });
     });
     </script>
