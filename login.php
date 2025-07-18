@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $conn->real_escape_string($_POST['username'] ?? '');
     $password = $conn->real_escape_string($_POST['password'] ?? '');
 
-    $sql = "SELECT * FROM usuarios WHERE nombre_usuario = '$username' AND contraseña = '$password'";
+    $sql = "SELECT * FROM usuarios WHERE nombre_usuario = '$username' AND contrasena = '$password'";
     $result = $conn->query($sql);
 
     if ($result && $result->num_rows === 1) {
