@@ -1,6 +1,10 @@
 <?php
 include 'conexion.php'; 
-
+session_start();
+if (!isset($_SESSION['usuario'])) {
+    header('Location: login.php');
+    exit;
+}
 $sql_dias = "SELECT d.id_dia, j.dias AS jornada_nombre, CONCAT(i.hora_inicio, ' - ', i.hora_fin) AS horario, m.nombre AS materia_nombre, a.numero AS aula_numero
              FROM dias d
              LEFT JOIN jornada j ON d.jornada_id = j.id_jornada 
@@ -144,6 +148,18 @@ $result_dias = $conn->query($sql_dias);
         .dispocision{
             margin-top: 200px;
         }
+        #out{
+            background-color: #df2424ff;
+            color: white;
+            width: 110px;
+            text-decoration:none;
+            padding:20px;
+            padding-bottom:10px;
+            padding-top:10px;
+            text-align: center;
+            border-radius:4px;
+            margin-left: 10px;
+        }
     </style>
 </head>
 <body>
@@ -195,7 +211,8 @@ $result_dias = $conn->query($sql_dias);
             <p align="center">Contenido relacionado con insumos (próximamente).</p>
         </div>
     </div>
-
+    <br><br><br><br><br><br>
+    <a id="out" href="logout.php">Cerrar Sesion</a>
     <?php
     $conn->close();
     ?>
