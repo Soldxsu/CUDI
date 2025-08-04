@@ -86,15 +86,17 @@ if ($result && $result->num_rows > 0) {
         font-family: 'Segoe UI';
         text-decoration: none;
     }
+
     .nav-links a {
-            color: black;
-            text-decoration: none;
-            margin-left: 20px;
-            font-size: 18px;
-            padding: 5px 10px;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
-        }
+        color: black;
+        text-decoration: none;
+        margin-left: 20px;
+        font-size: 18px;
+        padding: 5px 10px;
+        border-radius: 5px;
+        transition: background-color 0.3s ease;
+    }
+
     .nav-links {
         display: flex;
         list-style: none;
@@ -113,18 +115,32 @@ if ($result && $result->num_rows > 0) {
     .nav-links a:hover {
         background: linear-gradient(to right, #3B6CDC, #6BD4E2);
         color:white;
-        }
+    }
+    #perfil{
+        width: 50px;
+        height: 50px;
+        margin-left: 10px;
+        margin-top:8px;
+        border:none;
+        border-radius:150px;
+    }
+
+    #perfil:hover{
+        background: #969696bb;
+        transition: 0.80s;
+    }
     </style>
 </head>
 <body>
     <nav class="nav">
-        <a href="index.html"><img id="logo" src="img/logo.png" alt="logo"></a>
+        <a href="index.php"><img id="logo" src="img/logo.png" alt="logo"></a>
         <div class="nav-links">
             <a href="disposicionaulica.php">Disposición Áulica</a>
             <a href="#">Insumos</a>
         </div>
+        <a href="perfil.php"><img id="perfil" src="img/perfil.webp"></a>
     </nav>
-
+    <br><br><br><br><br>
     <h1 align="center">Disposición Áulica</h1>
     <a href="añadir_aula.php" class="add-button">Añadir Nueva Disposición</a>
 
