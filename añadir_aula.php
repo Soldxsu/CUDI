@@ -248,6 +248,24 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
         .btn-add:hover {
             background: #218838;
         }
+        
+        /* Asegurar que los botones de acción sean visibles */
+        .select-container .btn-action {
+            position: relative !important;
+            z-index: 1000 !important;
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        /* Estilo específico para el contenedor de materias */
+        .form-group:has(#materia_id) .select-container {
+            display: flex !important;
+            align-items: center !important;
+            gap: 14px !important;
+            flex-wrap: nowrap !important;
+            width: 100% !important;
+        }
         .form-group input[type="time"] {
             max-width: 180px;
         }
@@ -507,9 +525,9 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
                         <option value="<?php echo $row['id_materia']; ?>" data-carrera="<?php echo isset($row['carrera_id']) ? $row['carrera_id'] : ''; ?>" data-curso="<?php echo isset($row['curso_pre_admision_id']) ? $row['curso_pre_admision_id'] : ''; ?>"><?php echo htmlspecialchars($label); ?></option>
                         <?php endwhile; ?>
                     </select>
-                    <button type="button" class="btn-action btn-add" onclick="openModal('materia')">+</button>
-                    <button type="button" class="btn-action btn-edit" onclick="editModal('materia')">✏️</button>
-                    <button type="button" class="btn-action btn-delete" onclick="deleteItem('materia')">🗑️</button>
+                    <button type="button" class="btn-action btn-add" onclick="console.log('Botón agregar materia clickeado'); openModal('materia')" title="Agregar Materia">+</button>
+                    <button type="button" class="btn-action btn-edit" onclick="console.log('Botón editar materia clickeado'); editModal('materia')" title="Editar Materia">✏️</button>
+                    <button type="button" class="btn-action btn-delete" onclick="console.log('Botón eliminar materia clickeado'); deleteItem('materia')" title="Eliminar Materia">🗑️</button>
                 </div>
             </div>
 
@@ -594,7 +612,10 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
                     <!-- Los campos se cargarán dinámicamente -->
                 </div>
                 
-                <button type="submit" class="btn-submit">Guardar</button>
+                <div class="acciones-modal">
+                    <button type="submit" class="btn-submit">Guardar</button>
+                    <button type="button" onclick="closeModal()">Cancelar</button>
+                </div>
             </form>
         </div>
     </div>
@@ -606,10 +627,38 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
 
     <script>
     $(document).ready(function() {
-        $('#materia_id, #jornada_id, #aula_id').select2({
+        console.log('Página cargada, configurando Select2...');
+        
+        // Verificar si los botones de materia están presentes ANTES de Select2
+        const materiaButtonsBefore = document.querySelectorAll('.btn-action[onclick*="materia"]');
+        console.log('Botones de materia encontrados ANTES de Select2:', materiaButtonsBefore.length);
+        materiaButtonsBefore.forEach((btn, index) => {
+            console.log(`Botón ${index + 1} ANTES:`, btn.outerHTML);
+        });
+        
+        $('#jornada_id, #aula_id').select2({
             placeholder: "Seleccione una opción",
             width: '100%'
         });
+        
+        // Configurar Select2 para materia con un contenedor específico
+        $('#materia_id').select2({
+            placeholder: "Seleccione una opción",
+            width: 'calc(100% - 150px)', // Dejar espacio para los botones
+            dropdownParent: $('#materia_id').parent()
+        });
+        
+        // Verificar si los botones de materia están presentes DESPUÉS de Select2
+        setTimeout(function() {
+            const materiaButtonsAfter = document.querySelectorAll('.btn-action[onclick*="materia"]');
+            console.log('Botones de materia encontrados DESPUÉS de Select2:', materiaButtonsAfter.length);
+            materiaButtonsAfter.forEach((btn, index) => {
+                console.log(`Botón ${index + 1} DESPUÉS:`, btn.outerHTML);
+                console.log('Botón visible:', btn.offsetParent !== null);
+                console.log('Botón display:', window.getComputedStyle(btn).display);
+                console.log('Botón visibility:', window.getComputedStyle(btn).visibility);
+            });
+        }, 1000);
     });
 
     // Funciones para los botones de profesor
@@ -723,6 +772,7 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
     }
 
     function openModal(type) {
+        console.log('Abriendo modal para:', type);
         document.getElementById('modal-type').value = type;
         document.getElementById('modal-id').value = '';
         document.getElementById('modal-title').textContent = 'Agregar Nuevo ' + getTypeName(type);
@@ -737,8 +787,8 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
                 break;
             case 'materia':
                 fields = '<div class="form-group"><label>Nombre:</label><input type="text" name="nombre" required></div>' +
-                        '<div class="form-group"><label>Carrera:</label><select name="carrera_id" disabled><option value="">Seleccione una carrera</option><?php $carreras_options->data_seek(0); while ($row = $carreras_options->fetch_assoc()): ?><option value="<?php echo $row["id_carrera"]; ?>"><?php echo htmlspecialchars($row["nombre"]); ?></option><?php endwhile; ?></select></div>' +
-                        '<div class="form-group"><label>Curso Pre-Admisión:</label><select name="curso_pre_admision_id" disabled><option value="">Seleccione un curso</option><?php $cursos_pre_admision_options->data_seek(0); while ($row = $cursos_pre_admision_options->fetch_assoc()): ?><option value="<?php echo $row["id_curso_pre_admision"]; ?>"><?php echo htmlspecialchars($row["nombre_curso"]); ?></option><?php endwhile; ?></select></div>';
+                        '<div class="form-group"><label>Carrera:</label><select name="carrera_id"><option value="">Seleccione una carrera</option><?php $carreras_options->data_seek(0); while ($row = $carreras_options->fetch_assoc()): ?><option value="<?php echo $row["id_carrera"]; ?>"><?php echo htmlspecialchars($row["nombre"]); ?></option><?php endwhile; ?></select></div>' +
+                        '<div class="form-group"><label>Curso Pre-Admisión:</label><select name="curso_pre_admision_id"><option value="">Seleccione un curso</option><?php $cursos_pre_admision_options->data_seek(0); while ($row = $cursos_pre_admision_options->fetch_assoc()): ?><option value="<?php echo $row["id_curso_pre_admision"]; ?>"><?php echo htmlspecialchars($row["nombre_curso"]); ?></option><?php endwhile; ?></select></div>';
                 break;
             case 'aula':
                 fields = '<div class="form-group"><label>Número:</label><input type="text" name="numero" required></div>' +
@@ -766,6 +816,7 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
     }
 
     function editModal(type) {
+        console.log('Intentando editar:', type);
         let select;
         
         // Caso especial para profesor - no tiene select en el formulario principal
@@ -824,6 +875,7 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
     }
     
     function proceedWithEdit(type, id) {
+        console.log('Procediendo con edición:', type, id);
         document.getElementById('modal-type').value = type;
         document.getElementById('modal-id').value = id;
         document.getElementById('modal-title').textContent = 'Editar ' + getTypeName(type);
@@ -932,6 +984,7 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
     }
 
     function deleteItem(type) {
+        console.log('Intentando eliminar:', type);
         const select = document.getElementById(type + '_id');
         
         if (!select.value) {
@@ -964,10 +1017,12 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
     }
 
     function closeModal() {
+        console.log('Cerrando modal...');
         document.getElementById('modal').style.display = 'none';
     }
 
     function getTypeName(type) {
+        console.log('Obteniendo nombre para tipo:', type);
         const names = {
             'jornada': 'Jornada',
             'itinerario': 'Horario',
@@ -984,6 +1039,7 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
         
         const formData = new FormData(this);
         
+        console.log('Enviando datos al servidor...');
         $.ajax({
             url: 'save_item.php',
             type: 'POST',
@@ -991,6 +1047,7 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
             processData: false,
             contentType: false,
             success: function(response) {
+                console.log('Respuesta del servidor:', response);
                 const result = JSON.parse(response);
                 if (result.success) {
                     // Si se guardó un profesor nuevo, asociarlo a la materia seleccionada
@@ -1018,7 +1075,8 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
                     alert('Error al guardar: ' + result.message);
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error('Error en la petición AJAX:', xhr, status, error);
                 alert('Error al guardar el elemento');
             }
         });
@@ -1026,10 +1084,14 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
 
     // Función para manejar la lógica de bloqueo mutuo entre carrera y curso pre-admisión
     function setupMateriaFieldLogic() {
+        console.log('Configurando lógica de campos de materia...');
         const carreraSelect = document.querySelector('select[name="carrera_id"]');
         const cursoSelect = document.querySelector('select[name="curso_pre_admision_id"]');
         
-        if (!carreraSelect || !cursoSelect) return;
+        if (!carreraSelect || !cursoSelect) {
+            console.log('No se encontraron los selects de carrera o curso');
+            return;
+        }
         
         // Función para actualizar el estado de los campos
         function updateFieldStates() {

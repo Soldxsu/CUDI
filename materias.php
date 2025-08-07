@@ -1,39 +1,34 @@
 <?php
 include 'conexion.php';
-
-// Procesar acciones de añadir, editar, eliminar
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['action'])) {
-        // Función para capitalizar cada palabra
-        function capitalizar_palabras($str) {
-            return mb_convert_case(trim($str), MB_CASE_TITLE, "UTF-8");
-        }
-        if ($_POST['action'] === 'add') {
-            $nombre = capitalizar_palabras($conn->real_escape_string($_POST['nombre']));
-            $carrera_id = isset($_POST['carrera_id']) ? intval($_POST['carrera_id']) : 'NULL';
-            $curso_pre_admision_id = isset($_POST['curso_pre_admision_id']) ? intval($_POST['curso_pre_admision_id']) : 'NULL';
-            $conn->query("INSERT INTO materias (nombre, carrera_id, curso_pre_admision_id) VALUES ('$nombre', $carrera_id, $curso_pre_admision_id)");
-        } elseif ($_POST['action'] === 'edit' && isset($_POST['id_materia'])) {
-            $id = intval($_POST['id_materia']);
-            $nombre = capitalizar_palabras($conn->real_escape_string($_POST['nombre']));
-            $carrera_id = isset($_POST['carrera_id']) ? intval($_POST['carrera_id']) : 'NULL';
-            $curso_pre_admision_id = isset($_POST['curso_pre_admision_id']) ? intval($_POST['curso_pre_admision_id']) : 'NULL';
-            $conn->query("UPDATE materias SET nombre='$nombre', carrera_id=$carrera_id, curso_pre_admision_id=$curso_pre_admision_id WHERE id_materia=$id");
-        } elseif ($_POST['action'] === 'delete' && isset($_POST['id_materia'])) {
-            $id = intval($_POST['id_materia']);
-            $conn->query("DELETE FROM materias WHERE id_materia=$id");
-        }
-        header('Location: materias.php');
-        exit;
-    }
+session_start();
+if (!isset($_SESSION['usuario'])) {
+    header('Location: login.php');
+    exit;
 }
 
-// Obtener todas las materias y su información relacionada
-$sql = "SELECT m.*, c.nombre AS carrera, cp.nombre_curso AS curso_pre_admision FROM materias m LEFT JOIN carreras c ON m.carrera_id = c.id_carrera LEFT JOIN cursos_pre_admisiones cp ON m.curso_pre_admision_id = cp.id_curso_pre_admision ORDER BY m.nombre";
+// Obtener el término de búsqueda
+$busqueda = isset($_GET['busqueda']) ? trim($_GET['busqueda']) : '';
+
+// Construir la consulta SQL con filtro de búsqueda
+$sql = "SELECT m.*, c.nombre AS carrera, cp.nombre_curso AS curso_pre_admision, 
+               CONCAT(p.nombre, ' ', p.apellido) AS profesor_nombre
+        FROM materias m 
+        LEFT JOIN carreras c ON m.carrera_id = c.id_carrera 
+        LEFT JOIN cursos_pre_admisiones cp ON m.curso_pre_admision_id = cp.id_curso_pre_admision
+        LEFT JOIN profesores p ON m.profesor_id = p.id_profesor";
+
+if (!empty($busqueda)) {
+    $busqueda_escaped = $conn->real_escape_string($busqueda);
+    $sql .= " WHERE m.nombre LIKE '%$busqueda_escaped%' OR c.nombre LIKE '%$busqueda_escaped%' OR p.nombre LIKE '%$busqueda_escaped%' OR p.apellido LIKE '%$busqueda_escaped%'";
+}
+
+$sql .= " ORDER BY m.nombre";
 $materias = $conn->query($sql);
-// Obtener carreras y cursos para los selects
+
+// Obtener carreras, cursos y profesores para los selects
 $carreras = $conn->query("SELECT id_carrera, nombre FROM carreras ORDER BY nombre");
 $cursos = $conn->query("SELECT id_curso_pre_admision, nombre_curso FROM cursos_pre_admisiones ORDER BY nombre_curso");
+$profesores = $conn->query("SELECT id_profesor, nombre, apellido FROM profesores ORDER BY apellido, nombre");
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -64,6 +59,31 @@ $cursos = $conn->query("SELECT id_curso_pre_admision, nombre_curso FROM cursos_p
             border-bottom: 2px solid #e3eefd;
             padding-bottom: 12px;
         }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .btn-volver {
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .btn-volver:hover {
+            background: #5a6268;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
         .materias-header h2 {
             margin: 0;
             font-size: 2.3em;
@@ -89,6 +109,56 @@ $cursos = $conn->query("SELECT id_curso_pre_admision, nombre_curso FROM cursos_p
         .materias-header .btn-add:hover {
             background: #218838;
             box-shadow: 0 4px 16px rgba(40,167,69,0.18);
+        }
+        .search-container {
+            margin-bottom: 24px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .search-input {
+            flex: 1;
+            max-width: 400px;
+            padding: 12px 16px;
+            border: 2px solid #e3eefd;
+            border-radius: 8px;
+            font-size: 1em;
+            background: #f7faff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: #0074ff;
+            box-shadow: 0 0 0 3px rgba(0,116,255,0.1);
+        }
+        .search-btn {
+            background: #0074ff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .search-btn:hover {
+            background: #0056b3;
+            box-shadow: 0 4px 12px rgba(0,116,255,0.2);
+        }
+        .clear-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .clear-btn:hover {
+            background: #5a6268;
         }
         .materias-table {
             width: 100%;
@@ -153,14 +223,62 @@ $cursos = $conn->query("SELECT id_curso_pre_admision, nombre_curso FROM cursos_p
         .icon-circle span {
             font-size: 38px;
         }
+        .no-results {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+            font-size: 1.1em;
+        }
+        .results-info {
+            margin-bottom: 16px;
+            color: #6c757d;
+            font-size: 0.95em;
+            font-weight: 500;
+        }
+        .acciones {
+            display: flex;
+            gap: 8px;
+        }
+        .acciones button {
+            border: none;
+            border-radius: 4px;
+            padding: 7px 12px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        .btn-edit { background: #ffc107; color: #222; }
+        .btn-delete { background: #dc3545; color: #fff; }
+        .btn-link { background: #007bff; color: #fff; }
     </style>
 </head>
 <body>
     <div class="main-container">
         <div class="materias-header">
-            <h2>Materias</h2>
+            <div class="header-left">
+                <a href="disposicionaulica.php" class="btn-volver">← Volver</a>
+                <h2>Materias</h2>
+            </div>
             <button class="btn-add" onclick="abrirModalAgregar()">+</button>
         </div>
+        
+        <!-- Barra de búsqueda -->
+        <form method="GET" class="search-container">
+            <input type="text" name="busqueda" class="search-input" placeholder="Buscar por nombre de materia, carrera o profesor..." value="<?php echo htmlspecialchars($busqueda); ?>">
+            <button type="submit" class="search-btn">🔍 Buscar</button>
+            <?php if (!empty($busqueda)): ?>
+                <a href="materias.php" class="clear-btn">Limpiar</a>
+            <?php endif; ?>
+        </form>
+        
+        <?php if (!empty($busqueda)): ?>
+            <div class="results-info">
+                <?php 
+                $total_resultados = $materias->num_rows;
+                echo "Mostrando $total_resultados resultado" . ($total_resultados != 1 ? 's' : '') . " para: \"$busqueda\"";
+                ?>
+            </div>
+        <?php endif; ?>
+        
         <table class="materias-table">
             <thead>
                 <tr>
@@ -168,30 +286,40 @@ $cursos = $conn->query("SELECT id_curso_pre_admision, nombre_curso FROM cursos_p
                     <th>Nombre</th>
                     <th>Carrera</th>
                     <th>Curso Pre-Admisión</th>
+                    <th>Profesor</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                <?php while($m = $materias->fetch_assoc()): ?>
-                <tr>
-                    <td><span class="avatar-materia">📚</span></td>
-                    <td><?php echo htmlspecialchars($m['nombre']); ?></td>
-                    <td><?php echo $m['carrera'] ? htmlspecialchars($m['carrera']) : '-'; ?></td>
-                    <td><?php echo $m['curso_pre_admision'] ? htmlspecialchars($m['curso_pre_admision']) : '-'; ?></td>
-                    <td class="acciones">
-                        <button class="btn-edit" onclick="abrirModalEditar(<?php echo $m['id_materia']; ?>, '<?php echo htmlspecialchars($m['nombre']); ?>', '<?php echo $m['carrera_id']; ?>', '<?php echo $m['curso_pre_admision_id']; ?>')">✏️</button>
-                        <form method="POST" style="display:inline;" onsubmit="return confirm('¿Seguro que desea eliminar esta materia?');">
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="id_materia" value="<?php echo $m['id_materia']; ?>">
-                            <button class="btn-delete" type="submit">🗑️</button>
-                        </form>
-                    </td>
-                </tr>
-                <?php endwhile; ?>
+                <?php if ($materias->num_rows > 0): ?>
+                    <?php while($m = $materias->fetch_assoc()): ?>
+                    <tr>
+                        <td><span class="avatar-materia">📚</span></td>
+                        <td><?php echo htmlspecialchars($m['nombre']); ?></td>
+                        <td><?php echo $m['carrera'] ? htmlspecialchars($m['carrera']) : '-'; ?></td>
+                        <td><?php echo $m['curso_pre_admision'] ? htmlspecialchars($m['curso_pre_admision']) : '-'; ?></td>
+                        <td><?php echo $m['profesor_nombre'] ? htmlspecialchars($m['profesor_nombre']) : '-'; ?></td>
+                        <td class="acciones">
+                            <button class="btn-edit" onclick="abrirModalEditar(<?php echo $m['id_materia']; ?>, '<?php echo htmlspecialchars($m['nombre']); ?>', '<?php echo $m['carrera_id']; ?>', '<?php echo $m['curso_pre_admision_id']; ?>')">✏️</button>
+                            <button class="btn-delete" onclick="eliminarMateria(<?php echo $m['id_materia']; ?>, '<?php echo htmlspecialchars($m['nombre']); ?>')">🗑️</button>
+                            <button class="btn-link" onclick="abrirModalEnlazar(<?php echo $m['id_materia']; ?>, '<?php echo htmlspecialchars($m['nombre']); ?>')">🔗</button>
+                        </td>
+                    </tr>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <tr>
+                        <td colspan="6" class="no-results">
+                            <?php if (!empty($busqueda)): ?>
+                                No se encontraron materias que coincidan con "<?php echo htmlspecialchars($busqueda); ?>"
+                            <?php else: ?>
+                                No hay materias registradas
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>
-    <a href="añadir_aula.php" class="back-button" style="margin: 30px auto 0 auto; display: block; max-width: 350px; background: #6c757d; color: white; text-align: center; text-decoration: none; border-radius: 5px; padding: 12px 0; font-size: 1.1em; font-weight: 500; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">Volver a Añadir Disposición Áulica</a>
 
     <!-- Modal profesional para agregar/editar materia -->
     <style>
@@ -267,9 +395,9 @@ $cursos = $conn->query("SELECT id_curso_pre_admision, nombre_curso FROM cursos_p
     <div class="modal" id="modal-materia">
         <div class="modal-content">
             <h3 id="modal-titulo">Agregar Materia</h3>
-            <form method="POST" id="form-materia">
-                <input type="hidden" name="action" id="modal-accion" value="add">
-                <input type="hidden" name="id_materia" id="modal-id-materia">
+            <form id="form-materia" onsubmit="guardarMateria(event)">
+                <input type="hidden" name="modo" id="modal-accion" value="agregar">
+                <input type="hidden" name="materia_id" id="modal-id-materia">
                 <div class="form-group">
                     <label>Nombre:</label>
                     <input type="text" name="nombre" id="modal-nombre" required>
@@ -299,10 +427,69 @@ $cursos = $conn->query("SELECT id_curso_pre_admision, nombre_curso FROM cursos_p
             </form>
         </div>
     </div>
+
+    <!-- Modal para enlazar materia con profesor -->
+    <div class="modal" id="modal-enlazar">
+        <div class="modal-content">
+            <h3>Enlazar Materia a Profesor</h3>
+            <form onsubmit="enlazarProfesor(event)">
+                <input type="hidden" name="id_materia" id="enlazar-id-materia">
+                <div class="form-group">
+                    <label for="profesor-modal">Profesor:</label>
+                    <div class="select-container">
+                        <select id="profesor-modal" name="id_profesor" required>
+                            <option value="">Seleccione un profesor</option>
+                            <?php $profesores->data_seek(0); while ($row = $profesores->fetch_assoc()): ?>
+                            <option value="<?php echo $row['id_profesor']; ?>"><?php echo htmlspecialchars($row['apellido'] . ', ' . $row['nombre']); ?></option>
+                            <?php endwhile; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="acciones-modal">
+                    <button type="submit" class="btn-link">Enlazar</button>
+                    <button type="button" onclick="cerrarModalEnlazar()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
+    function guardarMateria(event) {
+        event.preventDefault();
+        
+        const formData = new FormData();
+        formData.append('action', 'gestionar_materia');
+        formData.append('modo', document.getElementById('modal-accion').value);
+        formData.append('nombre', document.getElementById('modal-nombre').value);
+        formData.append('carrera_id', document.getElementById('modal-carrera').value);
+        formData.append('curso_pre_admision_id', document.getElementById('modal-curso').value);
+        
+        if (document.getElementById('modal-accion').value === 'editar') {
+            formData.append('materia_id', document.getElementById('modal-id-materia').value);
+        }
+        
+        fetch('gestionar_materias.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al guardar la materia');
+        });
+    }
+    
     function abrirModalAgregar() {
         document.getElementById('modal-titulo').textContent = 'Agregar Materia';
-        document.getElementById('modal-accion').value = 'add';
+        document.getElementById('modal-accion').value = 'agregar';
         document.getElementById('modal-id-materia').value = '';
         document.getElementById('modal-nombre').value = '';
         document.getElementById('modal-carrera').value = '';
@@ -313,7 +500,7 @@ $cursos = $conn->query("SELECT id_curso_pre_admision, nombre_curso FROM cursos_p
     }
     function abrirModalEditar(id, nombre, carrera_id, curso_id) {
         document.getElementById('modal-titulo').textContent = 'Editar Materia';
-        document.getElementById('modal-accion').value = 'edit';
+        document.getElementById('modal-accion').value = 'editar';
         document.getElementById('modal-id-materia').value = id;
         document.getElementById('modal-nombre').value = nombre;
         document.getElementById('modal-carrera').value = carrera_id;
@@ -333,8 +520,74 @@ $cursos = $conn->query("SELECT id_curso_pre_admision, nombre_curso FROM cursos_p
     function cerrarModal() {
         document.getElementById('modal-materia').style.display = 'none';
     }
+    
+    function abrirModalEnlazar(id_materia, nombre) {
+        document.getElementById('enlazar-id-materia').value = id_materia;
+        document.getElementById('modal-enlazar').style.display = 'flex';
+    }
+    
+    function cerrarModalEnlazar() {
+        document.getElementById('modal-enlazar').style.display = 'none';
+    }
+    
+    function enlazarProfesor(event) {
+        event.preventDefault();
+        
+        const formData = new FormData();
+        formData.append('action', 'actualizar_relacion_materia_profesor');
+        formData.append('materia_id', document.getElementById('enlazar-id-materia').value);
+        formData.append('profesor_id', document.getElementById('profesor-modal').value);
+        
+        fetch('gestionar_materias.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al enlazar profesor');
+        });
+    }
+    
+    function eliminarMateria(id_materia, nombre) {
+        if (!confirm('¿Está seguro de eliminar la materia "' + nombre + '"?')) {
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('action', 'eliminar_materia');
+        formData.append('materia_id', id_materia);
+        
+        fetch('gestionar_materias.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al eliminar la materia');
+        });
+    }
+    
     window.onclick = function(event) {
         if (event.target === document.getElementById('modal-materia')) cerrarModal();
+        if (event.target === document.getElementById('modal-enlazar')) cerrarModalEnlazar();
     }
     // Lógica de bloqueo mutuo entre carrera y curso pre-admisión
     window.addEventListener('DOMContentLoaded', function() {

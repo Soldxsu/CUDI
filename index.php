@@ -5,13 +5,15 @@ if (!isset($_SESSION['usuario'])) {
     header('Location: login.php');
     exit;
 }
-$sql_dias = "SELECT d.id_dia, j.dias AS jornada_nombre, CONCAT(i.hora_inicio, ' - ', i.hora_fin) AS horario, m.nombre AS materia_nombre, a.numero AS aula_numero
-             FROM dias d
-             LEFT JOIN jornada j ON d.jornada_id = j.id_jornada 
-             LEFT JOIN itinerario i ON d.itinerario_id = i.id_itinerario
-             LEFT JOIN materias m ON d.materia_id = m.id_materia
-             LEFT JOIN aulas a ON d.aula_id = a.id_aula
-             ORDER BY j.dias, i.hora_inicio, i.hora_fin";
+$sql_dias = "SELECT td.id_tarjeta, td.fecha, CONCAT(i.hora_inicio, ' - ', i.hora_fin) AS horario, m.nombre AS materia_nombre, a.numero AS aula_numero, t.nombre AS turno_nombre
+             FROM tarjetas_disposicion td
+             LEFT JOIN itinerario i ON td.itinerario_id = i.id_itinerario
+             LEFT JOIN materias m ON td.materia_id = m.id_materia
+             LEFT JOIN aulas a ON td.aula_id = a.id_aula
+             LEFT JOIN turnos t ON td.turno_id = t.id_turno
+             WHERE td.estado = 'activa'
+             ORDER BY td.fecha DESC, i.hora_inicio
+             LIMIT 10";
 $result_dias = $conn->query($sql_dias);
 ?>
 
@@ -181,7 +183,8 @@ $result_dias = $conn->query($sql_dias);
                 <table>
                     <thead>
                         <tr>
-                            <th>Día</th>
+                            <th>Fecha</th>
+                            <th>Turno</th>
                             <th>Horario</th>
                             <th>Materia</th>
                             <th>Aula</th>
@@ -190,7 +193,8 @@ $result_dias = $conn->query($sql_dias);
                     <tbody>
                         <?php while($row = $result_dias->fetch_assoc()): ?>
                             <tr>
-                                <td><?php echo $row['jornada_nombre']; ?></td>
+                                <td><?php echo date('d/m/Y', strtotime($row['fecha'])); ?></td>
+                                <td><?php echo $row['turno_nombre']; ?></td>
                                 <td><?php echo $row['horario']; ?></td>
                                 <td><?php echo $row['materia_nombre']; ?></td>
                                 <td><?php echo $row['aula_numero']; ?></td>

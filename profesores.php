@@ -33,12 +33,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Obtener todos los profesores y sus materias
+// Obtener el término de búsqueda
+$busqueda = isset($_GET['busqueda']) ? trim($_GET['busqueda']) : '';
+
+// Construir la consulta SQL con filtro de búsqueda
 $sql = "SELECT p.*, GROUP_CONCAT(m.nombre SEPARATOR ', ') AS materias
         FROM profesores p
-        LEFT JOIN materias m ON m.profesor_id = p.id_profesor
-        GROUP BY p.id_profesor
-        ORDER BY p.apellido, p.nombre";
+        LEFT JOIN materias m ON m.profesor_id = p.id_profesor";
+
+if (!empty($busqueda)) {
+    $busqueda_escaped = $conn->real_escape_string($busqueda);
+    $sql .= " WHERE p.nombre LIKE '%$busqueda_escaped%' OR p.apellido LIKE '%$busqueda_escaped%' OR p.correo LIKE '%$busqueda_escaped%' OR m.nombre LIKE '%$busqueda_escaped%'";
+}
+
+$sql .= " GROUP BY p.id_profesor ORDER BY p.apellido, p.nombre";
 $profesores = $conn->query($sql);
 
 // Obtener materias para enlazar
@@ -74,6 +82,31 @@ $materias = $conn->query("SELECT id_materia, nombre, carrera_id, curso_pre_admis
             border-bottom: 2px solid #e3eefd;
             padding-bottom: 12px;
         }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .btn-volver {
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .btn-volver:hover {
+            background: #5a6268;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
         .profesores-header h2 {
             margin: 0;
             font-size: 2.3em;
@@ -99,6 +132,56 @@ $materias = $conn->query("SELECT id_materia, nombre, carrera_id, curso_pre_admis
         .profesores-header .btn-add:hover {
             background: #218838;
             box-shadow: 0 4px 16px rgba(40,167,69,0.18);
+        }
+        .search-container {
+            margin-bottom: 24px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .search-input {
+            flex: 1;
+            max-width: 400px;
+            padding: 12px 16px;
+            border: 2px solid #e3eefd;
+            border-radius: 8px;
+            font-size: 1em;
+            background: #f7faff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: #0074ff;
+            box-shadow: 0 0 0 3px rgba(0,116,255,0.1);
+        }
+        .search-btn {
+            background: #0074ff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .search-btn:hover {
+            background: #0056b3;
+            box-shadow: 0 4px 12px rgba(0,116,255,0.2);
+        }
+        .clear-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .clear-btn:hover {
+            background: #5a6268;
         }
         .profesores-table {
             width: 100%;
@@ -211,6 +294,18 @@ $materias = $conn->query("SELECT id_materia, nombre, carrera_id, curso_pre_admis
         .btn-edit { background: #ffc107; color: #222; }
         .btn-delete { background: #dc3545; color: #fff; }
         .btn-link { background: #007bff; color: #fff; }
+        .no-results {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+            font-size: 1.1em;
+        }
+        .results-info {
+            margin-bottom: 16px;
+            color: #6c757d;
+            font-size: 0.95em;
+            font-weight: 500;
+        }
         /* --- MODALES: estilos copiados de añadir.css para unificar diseño --- */
         .modal {
             display: none;
@@ -346,9 +441,31 @@ $materias = $conn->query("SELECT id_materia, nombre, carrera_id, curso_pre_admis
 <body>
     <div class="main-container">
         <div class="profesores-header">
-            <h2>Profesores</h2>
+            <div class="header-left">
+                <a href="disposicionaulica.php" class="btn-volver">← Volver</a>
+                <h2>Profesores</h2>
+            </div>
             <button class="btn-add" onclick="abrirModalAgregar()">+</button>
         </div>
+        
+        <!-- Barra de búsqueda -->
+        <form method="GET" class="search-container">
+            <input type="text" name="busqueda" class="search-input" placeholder="Buscar por nombre, apellido, correo o materia..." value="<?php echo htmlspecialchars($busqueda); ?>">
+            <button type="submit" class="search-btn">🔍 Buscar</button>
+            <?php if (!empty($busqueda)): ?>
+                <a href="profesores.php" class="clear-btn">Limpiar</a>
+            <?php endif; ?>
+        </form>
+        
+        <?php if (!empty($busqueda)): ?>
+            <div class="results-info">
+                <?php 
+                $total_resultados = $profesores->num_rows;
+                echo "Mostrando $total_resultados resultado" . ($total_resultados != 1 ? 's' : '') . " para: \"$busqueda\"";
+                ?>
+            </div>
+        <?php endif; ?>
+        
         <table class="profesores-table">
             <thead>
                 <tr>
@@ -361,56 +478,67 @@ $materias = $conn->query("SELECT id_materia, nombre, carrera_id, curso_pre_admis
                 </tr>
             </thead>
             <tbody>
-                <?php while($p = $profesores->fetch_assoc()): ?>
-                <tr>
-                    <td><span class="avatar-profesor"><?php echo strtoupper(mb_substr($p['nombre'],0,1).mb_substr($p['apellido'],0,1)); ?></span></td>
-                    <td><?php echo htmlspecialchars($p['nombre'] . ' ' . $p['apellido']); ?></td>
-                    <td><?php echo htmlspecialchars($p['correo']); ?></td>
-                    <td><?php echo ($p['telefono'] === '0' || $p['telefono'] === '' || $p['telefono'] === '-') ? '-' : htmlspecialchars($p['telefono']); ?></td>
-                    <td class="materias-cell">
-                        <div class="materias-list">
-                            <?php 
-                            $mats = array_map('trim', explode(',', $p['materias']));
-                            $hay_materias = false;
-                            // Obtener ids de materias para desenlazar
-                            $sql_ids = "SELECT id_materia, nombre FROM materias WHERE profesor_id = " . intval($p['id_profesor']);
-                            $res_ids = $conn->query($sql_ids);
-                            $ids_map = [];
-                            while($row_id = $res_ids->fetch_assoc()) {
-                                $ids_map[$row_id['nombre']] = $row_id['id_materia'];
-                            }
-                            foreach($mats as $mat) {
-                                if ($mat !== '') {
-                                    $hay_materias = true;
-                                    $id_materia = isset($ids_map[$mat]) ? $ids_map[$mat] : '';
-                                    echo '<span class="materia-chip">' . htmlspecialchars($mat);
-                                    if ($id_materia) {
-                                        echo ' <button class="chip-remove" title="Desenlazar" onclick="return desenlazarMateria(' . $p['id_profesor'] . ',' . $id_materia . ',\'' . htmlspecialchars($mat, ENT_QUOTES) . '\')">✖</button>';
-                                    }
-                                    echo '</span>';
+                <?php if ($profesores->num_rows > 0): ?>
+                    <?php while($p = $profesores->fetch_assoc()): ?>
+                    <tr>
+                        <td><span class="avatar-profesor"><?php echo strtoupper(mb_substr($p['nombre'],0,1).mb_substr($p['apellido'],0,1)); ?></span></td>
+                        <td><?php echo htmlspecialchars($p['nombre'] . ' ' . $p['apellido']); ?></td>
+                        <td><?php echo htmlspecialchars($p['correo']); ?></td>
+                        <td><?php echo ($p['telefono'] === '0' || $p['telefono'] === '' || $p['telefono'] === '-') ? '-' : htmlspecialchars($p['telefono']); ?></td>
+                        <td class="materias-cell">
+                            <div class="materias-list">
+                                <?php 
+                                $mats = array_map('trim', explode(',', $p['materias']));
+                                $hay_materias = false;
+                                // Obtener ids de materias para desenlazar
+                                $sql_ids = "SELECT id_materia, nombre FROM materias WHERE profesor_id = " . intval($p['id_profesor']);
+                                $res_ids = $conn->query($sql_ids);
+                                $ids_map = [];
+                                while($row_id = $res_ids->fetch_assoc()) {
+                                    $ids_map[$row_id['nombre']] = $row_id['id_materia'];
                                 }
-                            }
-                            if (!$hay_materias) {
-                                echo '<span style="color:#888;font-size:0.97em;">Enlaza el profesor a una materia para que aparezca aquí</span>';
-                            }
-                            ?>
-                        </div>
-                    </td>
-                    <td class="acciones">
-                        <button class="btn-edit" onclick="abrirModalEditar(<?php echo $p['id_profesor']; ?>, '<?php echo htmlspecialchars($p['nombre']); ?>', '<?php echo htmlspecialchars($p['apellido']); ?>', '<?php echo htmlspecialchars($p['correo']); ?>', '<?php echo htmlspecialchars($p['telefono']); ?>')">✏️</button>
-                        <form method="POST" style="display:inline;" onsubmit="return confirm('¿Seguro que desea eliminar este profesor?');">
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="id_profesor" value="<?php echo $p['id_profesor']; ?>">
-                            <button class="btn-delete" type="submit">🗑️</button>
-                        </form>
-                        <button class="btn-link" onclick="abrirModalEnlazar(<?php echo $p['id_profesor']; ?>)">🔗</button>
-                    </td>
-                </tr>
-                <?php endwhile; ?>
+                                foreach($mats as $mat) {
+                                    if ($mat !== '') {
+                                        $hay_materias = true;
+                                        $id_materia = isset($ids_map[$mat]) ? $ids_map[$mat] : '';
+                                        echo '<span class="materia-chip">' . htmlspecialchars($mat);
+                                        if ($id_materia) {
+                                            echo ' <button class="chip-remove" title="Desenlazar" onclick="return desenlazarMateria(' . $p['id_profesor'] . ',' . $id_materia . ',\'' . htmlspecialchars($mat, ENT_QUOTES) . '\')">✖</button>';
+                                        }
+                                        echo '</span>';
+                                    }
+                                }
+                                if (!$hay_materias) {
+                                    echo '<span style="color:#888;font-size:0.97em;">Enlaza el profesor a una materia para que aparezca aquí</span>';
+                                }
+                                ?>
+                            </div>
+                        </td>
+                        <td class="acciones">
+                            <button class="btn-edit" onclick="abrirModalEditar(<?php echo $p['id_profesor']; ?>, '<?php echo htmlspecialchars($p['nombre']); ?>', '<?php echo htmlspecialchars($p['apellido']); ?>', '<?php echo htmlspecialchars($p['correo']); ?>', '<?php echo htmlspecialchars($p['telefono']); ?>')">✏️</button>
+                            <form method="POST" style="display:inline;" onsubmit="return confirm('¿Seguro que desea eliminar este profesor?');">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="id_profesor" value="<?php echo $p['id_profesor']; ?>">
+                                <button class="btn-delete" type="submit">🗑️</button>
+                            </form>
+                            <button class="btn-link" onclick="abrirModalEnlazar(<?php echo $p['id_profesor']; ?>)">🔗</button>
+                        </td>
+                    </tr>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <tr>
+                        <td colspan="6" class="no-results">
+                            <?php if (!empty($busqueda)): ?>
+                                No se encontraron profesores que coincidan con "<?php echo htmlspecialchars($busqueda); ?>"
+                            <?php else: ?>
+                                No hay profesores registrados
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>
-    <a href="añadir_aula.php" class="back-button" style="margin: 30px auto 0 auto; display: block; max-width: 350px; background: #6c757d; color: white; text-align: center; text-decoration: none; border-radius: 5px; padding: 12px 0; font-size: 1.1em; font-weight: 500; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">Volver a Añadir Disposición Áulica</a>
 
     <!-- Modal para agregar/editar -->
     <div class="modal" id="modal-profesor">

@@ -1,174 +1,1652 @@
 <?php
 include 'conexion.php';
 
-if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
-    $id_dia = $_GET['id'];
-    $delete = "DELETE FROM dias WHERE id_dia = $id_dia";
-    if ($conn->query($delete) === TRUE) {
-    } else {
-        echo "<p style='color:red;'>Error al eliminar el registro: " . $conn->error . "</p>";
-    }
-}
-
-$aulas = $conn->query("SELECT id_aula, numero FROM aulas");
-$materias = $conn->query("SELECT id_materia, nombre FROM materias");
-$itinerarios = $conn->query("SELECT id_itinerario, CONCAT(hora_inicio, ' - ', hora_fin) AS horario FROM itinerario");
-
-$sql = "SELECT d.id_dia, j.dias, CONCAT(i.hora_inicio, ' - ', i.hora_fin) AS horario, 
-               m.nombre AS materia_nombre, a.numero AS aula_numero, 
-               p.nombre AS profesor_nombre, p.apellido AS profesor_apellido, 
-               a.piso, a.cantidad, c.nombre AS carrera_nombre, 
-               cpu.nombre_curso AS curso_pre_admision
-        FROM dias d
-        LEFT JOIN jornada j ON d.jornada_id = j.id_jornada
-        LEFT JOIN itinerario i ON d.itinerario_id = i.id_itinerario
-        LEFT JOIN materias m ON d.materia_id = m.id_materia
-        LEFT JOIN aulas a ON d.aula_id = a.id_aula
-        LEFT JOIN profesores p ON d.profesor_id = p.id_profesor
-        LEFT JOIN carreras c ON m.carrera_id = c.id_carrera
-        LEFT JOIN cursos_pre_admisiones cpu ON m.curso_pre_admision_id = cpu.id_curso_pre_admision";
-$result = $conn->query($sql);
-
-// Analizar los datos para saber si hay materias de carrera y/o de curso de pre-admisión
-$rows = [];
-$hay_carrera = false;
-$hay_curso = false;
-if ($result && $result->num_rows > 0) {
-    while($row = $result->fetch_assoc()) {
-        $rows[] = $row;
-        if (!empty($row['carrera_nombre']) && empty($row['curso_pre_admision'])) {
-            $hay_carrera = true;
-        }
-        if (!empty($row['curso_pre_admision']) && empty($row['carrera_nombre'])) {
-            $hay_curso = true;
+// Procesar acciones de crear, editar, eliminar tarjetas
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['action'])) {
+        if ($_POST['action'] === 'create_tarjeta') {
+            $fecha = $conn->real_escape_string($_POST['fecha']);
+            $turno_id = intval($_POST['turno_id']);
+            $itinerario_id = intval($_POST['itinerario_id']);
+            $materia_id = intval($_POST['materia_id']);
+            $aula_id = intval($_POST['aula_id']);
+            $profesor_id = intval($_POST['profesor_id']);
+            
+            $sql = "INSERT INTO tarjetas_disposicion (fecha, turno_id, itinerario_id, materia_id, aula_id, profesor_id, estado) 
+                    VALUES ('$fecha', $turno_id, $itinerario_id, $materia_id, $aula_id, $profesor_id, 'activa')";
+            
+            if ($conn->query($sql)) {
+                header('Location: disposicionaulica.php?success=1');
+                exit;
+            }
+        } elseif ($_POST['action'] === 'delete_tarjeta' && isset($_POST['id_tarjeta'])) {
+            $id = intval($_POST['id_tarjeta']);
+            $conn->query("DELETE FROM tarjetas_disposicion WHERE id_tarjeta = $id");
+            header('Location: disposicionaulica.php?deleted=1');
+            exit;
+        } elseif ($_POST['action'] === 'duplicate_tarjeta' && isset($_POST['id_tarjeta'])) {
+            $id = intval($_POST['id_tarjeta']);
+            $nueva_fecha = $conn->real_escape_string($_POST['nueva_fecha']);
+            
+            // Obtener datos de la tarjeta original
+            $original = $conn->query("SELECT * FROM tarjetas_disposicion WHERE id_tarjeta = $id")->fetch_assoc();
+            
+            // Crear nueva tarjeta con la nueva fecha
+            $sql = "INSERT INTO tarjetas_disposicion (fecha, turno_id, itinerario_id, materia_id, aula_id, profesor_id, estado) 
+                    VALUES ('$nueva_fecha', {$original['turno_id']}, {$original['itinerario_id']}, {$original['materia_id']}, {$original['aula_id']}, {$original['profesor_id']}, 'duplicada')";
+            
+            if ($conn->query($sql)) {
+                header('Location: disposicionaulica.php?duplicated=1');
+                exit;
+            }
         }
     }
 }
+
+// Obtener parámetros de filtro
+$mes = isset($_GET['mes']) ? intval($_GET['mes']) : date('n');
+$anio = isset($_GET['anio']) ? intval($_GET['anio']) : date('Y');
+$turno_filtro = isset($_GET['turno']) ? intval($_GET['turno']) : 0;
+
+// Obtener datos para el calendario
+$fecha_inicio = "$anio-" . str_pad($mes, 2, '0', STR_PAD_LEFT) . "-01";
+$fecha_fin = date('Y-m-t', strtotime($fecha_inicio));
+
+// Consulta de tarjetas con filtros
+$sql_tarjetas = "SELECT td.*, t.nombre AS turno_nombre, t.hora_inicio, t.hora_fin,
+                        m.nombre AS materia_nombre, 
+                        CONCAT(p.nombre, ' ', p.apellido) AS profesor_nombre,
+                        a.numero AS aula_nombre, a.cantidad AS capacidad,
+                        CONCAT(i.hora_inicio, ' - ', i.hora_fin) AS itinerario_nombre
+                 FROM tarjetas_disposicion td
+                 LEFT JOIN turnos t ON td.turno_id = t.id_turno
+                 LEFT JOIN materias m ON td.materia_id = m.id_materia
+                 LEFT JOIN profesores p ON td.profesor_id = p.id_profesor
+                 LEFT JOIN aulas a ON td.aula_id = a.id_aula
+                 LEFT JOIN itinerario i ON td.itinerario_id = i.id_itinerario
+                 WHERE td.fecha BETWEEN '$fecha_inicio' AND '$fecha_fin'";
+
+if ($turno_filtro > 0) {
+    $sql_tarjetas .= " AND td.turno_id = $turno_filtro";
+}
+
+$sql_tarjetas .= " ORDER BY td.fecha, t.hora_inicio";
+$tarjetas = $conn->query($sql_tarjetas);
+
+// Organizar tarjetas por fecha
+$tarjetas_por_fecha = [];
+while ($tarjeta = $tarjetas->fetch_assoc()) {
+    $fecha = $tarjeta['fecha'];
+    if (!isset($tarjetas_por_fecha[$fecha])) {
+        $tarjetas_por_fecha[$fecha] = [];
+    }
+    $tarjetas_por_fecha[$fecha][] = $tarjeta;
+}
+
+// Obtener datos para los formularios
+$turnos = $conn->query("SELECT * FROM turnos ORDER BY hora_inicio");
+$itinerarios = $conn->query("SELECT *, CONCAT(hora_inicio, ' - ', hora_fin) AS nombre FROM itinerario ORDER BY hora_inicio");
+$materias = $conn->query("SELECT DISTINCT m.id_materia, m.nombre, m.carrera_id, m.curso_pre_admision_id, m.profesor_id,
+                                c.nombre AS carrera_nombre, cpu.nombre_curso AS curso_nombre,
+                                CONCAT(p.nombre, ' ', p.apellido) AS profesor_nombre
+                         FROM materias m 
+                         LEFT JOIN carreras c ON m.carrera_id = c.id_carrera 
+                         LEFT JOIN cursos_pre_admisiones cpu ON m.curso_pre_admision_id = cpu.id_curso_pre_admision 
+                         LEFT JOIN profesores p ON m.profesor_id = p.id_profesor
+                         ORDER BY m.nombre");
+$aulas = $conn->query("SELECT *, numero AS nombre, cantidad AS capacidad FROM aulas ORDER BY numero");
+$profesores = $conn->query("SELECT * FROM profesores ORDER BY apellido, nombre");
+
+// Nombres de meses
+$meses = [
+    1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+    5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+    9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+];
+
+// Nombres de días
+$dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Disposición Áulica</title>
+    <title>Calendario de Disposición Áulica</title>
     <link rel="stylesheet" href="css/disposicion.css">
     <style>
-    nav.nav {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background-color: rgb(255, 255, 255);
-        width: 100%;
-        height: 80px;
-        padding: 30px;
-        box-sizing: border-box;
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-    }
-
-    nav.nav::after {
-        content: "";
-        position: absolute;
-        top: 90px;
-        right: 0px;
-        left: 0px;
-        height: 10px;
-        width: 100%;
-        background: linear-gradient(to right, #3B6CDC, #6BD4E2);
-    }
-
-    #logo {
-        width: 100px;
-        font-weight: bold;
-        color: rgb(0, 0, 0);
-        font-family: 'Segoe UI';
-        text-decoration: none;
-    }
-    .nav-links a {
-            color: black;
-            text-decoration: none;
-            margin-left: 20px;
-            font-size: 18px;
-            padding: 5px 10px;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f4f7fb;
         }
-    .nav-links {
-        display: flex;
-        list-style: none;
-        gap: 35px;
-        margin: 0;
-        margin-left: 700px;
-        padding: 0;
-    }
 
-    .nav-links {
-        color: rgb(0, 0, 0);
-        cursor: pointer;
-        font-size: 20px;
-        font-family: 'Segoe UI';
-    }
-    .nav-links a:hover {
-        background: linear-gradient(to right, #3B6CDC, #6BD4E2);
-        color:white;
+        .header {
+            background: linear-gradient(135deg, #3B6CDC 0%, #6BD4E2 100%);
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .header-links {
+            margin-top: 15px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .header-link {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .header-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .month-navigation {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .month-navigation button {
+            background: #3B6CDC;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        .month-navigation button:hover {
+            background: #2a5bb8;
+        }
+
+        .current-month {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #333;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .filters select {
+            padding: 8px 12px;
+            border: 2px solid #e3eefd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .btn-add {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .btn-add:hover {
+            background: #218838;
+        }
+
+        .calendar {
+            margin: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .calendar-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            background: #3B6CDC;
+            color: white;
+            font-weight: 600;
+        }
+
+        .calendar-header div {
+            padding: 15px;
+            text-align: center;
+            border-right: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .calendar-header div:last-child {
+            border-right: none;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+        }
+
+        .calendar-day {
+            min-height: 120px;
+            border: 1px solid #e3eefd;
+            padding: 10px;
+            position: relative;
+            background: white;
+        }
+
+        .calendar-day:hover {
+            background: #f8faff;
+        }
+
+        .calendar-day.other-month {
+            background: #f8f9fa;
+            color: #6c757d;
+        }
+
+        .calendar-day.today {
+            background: #e3f2fd;
+            border-color: #3B6CDC;
+        }
+
+        .day-number {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .tarjeta {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 6px 8px;
+            margin: 2px 0;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .tarjeta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .tarjeta.duplicada {
+            background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+        }
+
+        .tarjeta.programada {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 1% auto 2% auto;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            scrollbar-width: thin;
+            scrollbar-color: #3B6CDC #f0f0f0;
+        }
+
+        .modal-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-content::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb {
+            background: #3B6CDC;
+            border-radius: 4px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb:hover {
+            background: #2a5bb8;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e3eefd;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3B6CDC;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e3eefd;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-bottom: 8px;
+            background: #f8faff;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3B6CDC;
+            background: white;
+        }
+
+        .search-input::placeholder {
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        /* Custom Select Styles */
+        .custom-select-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .custom-select-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 2px solid #e3eefd;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .custom-select-header:hover {
+            border-color: #3B6CDC;
+        }
+
+        .custom-select-arrow {
+            font-size: 12px;
+            color: #6c757d;
+            transition: transform 0.3s;
+        }
+
+        .custom-select-container.open .custom-select-arrow {
+            transform: rotate(180deg);
+        }
+
+        .custom-select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #3B6CDC;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            max-height: 300px;
+            overflow: hidden;
+            z-index: 1000;
+            display: none;
+        }
+
+        .custom-select-container.open .custom-select-dropdown {
+            display: block;
+        }
+
+        .custom-select-dropdown .search-input {
+            margin: 0;
+            border: none;
+            border-bottom: 1px solid #e3eefd;
+            border-radius: 0;
+            background: #f8faff;
+        }
+
+        .custom-select-options {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .custom-select-option {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s;
+        }
+
+        .custom-select-option:hover {
+            background-color: #f8faff;
+        }
+
+        .custom-select-option.selected {
+            background-color: #3B6CDC;
+            color: white;
+        }
+
+        .custom-select-option.hidden {
+            display: none;
+        }
+
+        /* Estilos para las opciones de materia */
+        .materia-option-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .materia-nombre {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .materia-tipo {
+            font-size: 11px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .materia-profesor {
+            font-size: 11px;
+            color: #28a745;
+            font-weight: 500;
+        }
+
+
+
+        /* Sección de profesor */
+        .profesor-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .profesor-actual {
+            background: #e3f2fd;
+            border: 1px solid #3B6CDC;
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .profesor-info {
+            margin-bottom: 10px;
+        }
+
+        .profesor-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .profesor-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* Estilos para el dropdown de profesores */
+        .profesor-dropdown-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 10px;
+            border-bottom: 1px solid #e3eefd;
+        }
+
+        .profesor-dropdown-header .search-input {
+            flex: 1;
+            margin: 0;
+            border: none;
+            background: transparent;
+        }
+
+        .profesor-dropdown-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-icon {
+            background: #3B6CDC;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: #2a5bb8;
+        }
+
+        .profesor-option-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .profesor-nombre {
+            flex: 1;
+        }
+
+        .profesor-option-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .profesor-option:hover .profesor-option-actions {
+            opacity: 1;
+        }
+
+        .btn-icon-small {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 2px;
+            border-radius: 2px;
+            transition: background 0.2s;
+        }
+
+        .btn-icon-small:hover {
+            background: rgba(59, 108, 220, 0.1);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .btn-primary {
+            background: #3B6CDC;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2a5bb8;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 8px;
+            border: 1px solid #c3e6cb;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .back-button {
+            display: block;
+            margin: 30px auto;
+            max-width: 200px;
+            background: #6c757d;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 8px;
+            padding: 12px 0;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        .back-button:hover {
+            background: #5a6268;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .month-navigation {
+                justify-content: center;
+            }
+            
+            .filters {
+                justify-content: center;
+            }
+            
+            .calendar-header div,
+            .calendar-day {
+                padding: 8px;
+                font-size: 12px;
+            }
+            
+            .modal-content {
+                margin: 2% auto 2% auto;
+                max-height: 80vh;
+            }
         }
     </style>
 </head>
 <body>
-    <nav class="nav">
-        <a href="index.html"><img id="logo" src="img/logo.png" alt="logo"></a>
-        <div class="nav-links">
-            <a href="disposicionaulica.php">Disposición Áulica</a>
-            <a href="#">Insumos</a>
+    <div class="header">
+        <h1>Calendario de Disposición Áulica</h1>
+        <div class="header-links">
+            <a href="materias.php" class="header-link">Materias</a>
+            <a href="profesores.php" class="header-link">Profesores</a>
         </div>
-    </nav>
+    </div>
 
-    <h1 align="center">Disposición Áulica</h1>
-    <a href="añadir_aula.php" class="add-button">Añadir Nueva Disposición</a>
-
-    <?php if (count($rows) > 0): ?>
-        <table>
-            <thead>
-                <tr>
-                    <th>Jornada</th>
-                    <th>Horario Itinerario</th>
-                    <th>Materia</th>
-                    <th>Profesor</th>
-                    <?php if ($hay_carrera): ?><th>Carrera</th><?php endif; ?>
-                    <?php if ($hay_curso): ?><th>Curso Pre-Admisión</th><?php endif; ?>
-                    <th>Aula</th>
-                    <th>Piso</th>
-                    <th>Capacidad</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach($rows as $row): ?>
-                    <tr>
-                        <td><?php echo $row['dias']; ?></td>
-                        <td><?php echo $row['horario']; ?></td>
-                        <td><?php echo $row['materia_nombre']; ?></td>
-                        <td><?php echo $row['profesor_nombre'] . ' ' . $row['profesor_apellido']; ?></td>
-                        <?php if ($hay_carrera): ?><td><?php echo (!empty($row['carrera_nombre']) && empty($row['curso_pre_admision'])) ? $row['carrera_nombre'] : ''; ?></td><?php endif; ?>
-                        <?php if ($hay_curso): ?><td><?php echo (!empty($row['curso_pre_admision']) && empty($row['carrera_nombre'])) ? $row['curso_pre_admision'] : ''; ?></td><?php endif; ?>
-                        <td><?php echo $row['aula_numero']; ?></td>
-                        <td><?php echo $row['piso']; ?></td>
-                        <td><?php echo $row['cantidad']; ?></td>
-                        <td class="actions">
-                            <a href="actualizar.php?id=<?php echo $row['id_dia']; ?>" class="edit">Modificar</a>
-                            <a href="disposicionaulica.php?action=delete&id=<?php echo $row['id_dia']; ?>" class="delete" onclick="return confirm('¿Está seguro de que desea eliminar este registro?');">Eliminar</a>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    <?php else: ?>
-        <p id="p" align="center">No hay registros de disposición áulica.</p>
+    <?php if (isset($_GET['success'])): ?>
+        <div class="success-message">Tarjeta creada exitosamente</div>
     <?php endif; ?>
 
-    <?php $conn->close(); ?>
-    <a href="index.php" class="back-button" style="margin: 30px auto 40px auto; display: block; max-width: 350px; background: #6c757d; color: white; text-align: center; text-decoration: none; border-radius: 5px; padding: 12px 0; font-size: 1.1em; font-weight: 500; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">Volver al Inicio</a>
+    <?php if (isset($_GET['deleted'])): ?>
+        <div class="success-message">Tarjeta eliminada exitosamente</div>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['duplicated'])): ?>
+        <div class="success-message">Tarjeta duplicada exitosamente</div>
+    <?php endif; ?>
+
+    <div class="controls">
+        <div class="month-navigation">
+            <button onclick="changeMonth(-1)">← Anterior</button>
+            <div class="current-month"><?php echo $meses[$mes] . ' ' . $anio; ?></div>
+            <button onclick="changeMonth(1)">Siguiente →</button>
+        </div>
+
+        <div class="filters">
+            <select onchange="filterByTurno(this.value)">
+                <option value="0">Todos los turnos</option>
+                <?php $turnos->data_seek(0); while ($turno = $turnos->fetch_assoc()): ?>
+                    <option value="<?php echo $turno['id_turno']; ?>" <?php echo $turno_filtro == $turno['id_turno'] ? 'selected' : ''; ?>>
+                        <?php echo $turno['nombre']; ?>
+                    </option>
+                <?php endwhile; ?>
+            </select>
+            <button class="btn-add" onclick="openModal()"> Nueva Tarjeta</button>
+        </div>
+    </div>
+
+    <div class="calendar">
+        <div class="calendar-header">
+            <?php foreach ($dias_semana as $dia): ?>
+                <div><?php echo $dia; ?></div>
+            <?php endforeach; ?>
+        </div>
+        
+        <div class="calendar-grid">
+            <?php
+            $primer_dia = new DateTime("$anio-$mes-01");
+            $ultimo_dia = new DateTime("$anio-$mes-" . $primer_dia->format('t'));
+            
+            $inicio_calendario = clone $primer_dia;
+            $inicio_calendario->modify('-' . $primer_dia->format('w') . ' days');
+            
+            $fin_calendario = clone $ultimo_dia;
+            $fin_calendario->modify('+' . (6 - $ultimo_dia->format('w')) . ' days');
+            
+            $fecha_actual = clone $inicio_calendario;
+            
+            while ($fecha_actual <= $fin_calendario):
+                $fecha_str = $fecha_actual->format('Y-m-d');
+                $es_otro_mes = $fecha_actual->format('n') != $mes;
+                $es_hoy = $fecha_actual->format('Y-m-d') == date('Y-m-d');
+                $clase_dia = $es_otro_mes ? 'other-month' : '';
+                if ($es_hoy) $clase_dia .= ' today';
+            ?>
+                <div class="calendar-day <?php echo $clase_dia; ?>" data-fecha="<?php echo $fecha_str; ?>">
+                    <div class="day-number"><?php echo $fecha_actual->format('j'); ?></div>
+                    
+                    <?php if (isset($tarjetas_por_fecha[$fecha_str])): ?>
+                        <?php foreach ($tarjetas_por_fecha[$fecha_str] as $tarjeta): ?>
+                            <div class="tarjeta <?php echo $tarjeta['estado']; ?>" 
+                                 onclick="showTarjetaDetails(<?php echo htmlspecialchars(json_encode($tarjeta)); ?>)">
+                                <strong><?php echo $tarjeta['turno_nombre']; ?></strong><br>
+                                <?php echo $tarjeta['materia_nombre']; ?><br>
+                                <small><?php echo $tarjeta['aula_nombre']; ?></small>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            <?php
+                $fecha_actual->modify('+1 day');
+            endwhile;
+            ?>
+        </div>
+    </div>
+
+    <!-- Modal para crear nueva tarjeta -->
+    <div id="modalNuevaTarjeta" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nueva Tarjeta de Disposición</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <form method="POST">
+                <input type="hidden" name="action" value="create_tarjeta">
+                
+                <div class="form-group">
+                    <label>Fecha:</label>
+                    <input type="date" name="fecha" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Turno:</label>
+                    <select name="turno_id" required>
+                        <option value="">Seleccionar turno</option>
+                        <?php $turnos->data_seek(0); while ($turno = $turnos->fetch_assoc()): ?>
+                            <option value="<?php echo $turno['id_turno']; ?>">
+                                <?php echo $turno['nombre']; ?> (<?php echo $turno['hora_inicio']; ?> - <?php echo $turno['hora_fin']; ?>)
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Horario:</label>
+                    <select name="itinerario_id" id="itinerario_select" required disabled>
+                        <option value="">Primero selecciona un turno</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Materia:</label>
+                    <div class="custom-select-container">
+                        <div class="custom-select-header" onclick="toggleMateriaSelect()">
+                            <span id="materia_selected_text">Seleccionar materia</span>
+                            <span class="custom-select-arrow">▼</span>
+                        </div>
+                        <div class="custom-select-dropdown" id="materia_dropdown">
+                            <input type="text" id="buscar_materia" placeholder="Buscar materia..." class="search-input">
+                            <div class="custom-select-options" id="materia_options">
+                                <?php $materias->data_seek(0); while ($materia = $materias->fetch_assoc()): ?>
+                                    <div class="custom-select-option" 
+                                         data-value="<?php echo $materia['id_materia']; ?>" 
+                                         data-nombre="<?php echo htmlspecialchars($materia['nombre']); ?>"
+                                         data-carrera="<?php echo htmlspecialchars($materia['carrera_nombre'] ?? ''); ?>"
+                                         data-curso="<?php echo htmlspecialchars($materia['curso_nombre'] ?? ''); ?>"
+                                         data-profesor-id="<?php echo $materia['profesor_id'] ?? ''; ?>"
+                                         data-profesor-nombre="<?php echo htmlspecialchars($materia['profesor_nombre'] ?? ''); ?>">
+                                        <div class="materia-option-content">
+                                            <div class="materia-nombre"><?php echo $materia['nombre']; ?></div>
+                                            <?php if ($materia['carrera_nombre']): ?>
+                                                <?php 
+                                                $esDiplomatura = stripos($materia['carrera_nombre'], 'diplomatura') !== false;
+                                                $tipo = $esDiplomatura ? 'Diplomatura' : 'Carrera';
+                                                ?>
+                                                <div class="materia-tipo"><?php echo $tipo; ?>: <?php echo $materia['carrera_nombre']; ?></div>
+                                            <?php elseif ($materia['curso_nombre']): ?>
+                                                <div class="materia-tipo">Curso: <?php echo $materia['curso_nombre']; ?></div>
+                                            <?php endif; ?>
+                                            <?php if ($materia['profesor_nombre']): ?>
+                                                <div class="materia-profesor">Profesor: <?php echo $materia['profesor_nombre']; ?></div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endwhile; ?>
+                            </div>
+                        </div>
+                        <input type="hidden" name="materia_id" id="materia_hidden" required>
+                    </div>
+                </div>
+
+
+
+                <!-- Sección de profesor (inicialmente oculta) -->
+                <div id="profesor_section" class="form-group" style="display: none;">
+                    <label>Profesor:</label>
+                    <div class="profesor-options">
+                        <div id="profesor_actual" class="profesor-actual" style="display: none;">
+                            <div class="profesor-info">
+                                <strong>Profesor actual:</strong> <span id="profesor_nombre_actual"></span>
+                            </div>
+                            <div class="profesor-actions">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="cambiarProfesor()">Cambiar Profesor</button>
+                                <button type="button" class="btn btn-danger btn-sm" onclick="eliminarRelacionProfesor()">Eliminar Profesor</button>
+                            </div>
+                        </div>
+                        
+                        <div id="profesor_selector" class="profesor-selector" style="display: none;">
+                            <div class="custom-select-container">
+                                <div class="custom-select-header" onclick="toggleProfesorSelect()">
+                                    <span id="profesor_selected_text">Seleccionar profesor</span>
+                                    <span class="custom-select-arrow">▼</span>
+                                </div>
+                                <div class="custom-select-dropdown" id="profesor_dropdown">
+                                    <div class="profesor-dropdown-header">
+                                        <input type="text" id="buscar_profesor" placeholder="Buscar profesor..." class="search-input">
+                                        <div class="profesor-dropdown-actions">
+                                            <button type="button" class="btn-icon" onclick="agregarNuevoProfesor()" title="Agregar profesor">
+                                                <span>+</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="custom-select-options" id="profesor_options">
+                                        <?php $profesores->data_seek(0); while ($profesor = $profesores->fetch_assoc()): ?>
+                                            <div class="custom-select-option profesor-option" 
+                                                 data-value="<?php echo $profesor['id_profesor']; ?>" 
+                                                 data-nombre="<?php echo htmlspecialchars($profesor['nombre'] . ' ' . $profesor['apellido']); ?>"
+                                                 data-profesor='<?php echo json_encode($profesor); ?>'>
+                                                <div class="profesor-option-content">
+                                                    <span class="profesor-nombre"><?php echo $profesor['nombre'] . ' ' . $profesor['apellido']; ?></span>
+                                                    <div class="profesor-option-actions">
+                                                        <button type="button" class="btn-icon-small" onclick="editarProfesor(<?php echo $profesor['id_profesor']; ?>)" title="Editar">
+                                                            ✏️
+                                                        </button>
+                                                        <button type="button" class="btn-icon-small" onclick="eliminarProfesor(<?php echo $profesor['id_profesor']; ?>)" title="Eliminar">
+                                                            🗑️
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endwhile; ?>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="profesor_id" id="profesor_hidden" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Aula:</label>
+                    <select name="aula_id" required>
+                        <option value="">Seleccionar aula</option>
+                        <?php $aulas->data_seek(0); while ($aula = $aulas->fetch_assoc()): ?>
+                            <option value="<?php echo $aula['id_aula']; ?>">
+                                <?php echo $aula['nombre']; ?> (Cap: <?php echo $aula['capacidad']; ?>)
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+                
+
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear Tarjeta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para gestionar profesores -->
+    <div id="modalProfesor" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalProfesorTitulo">Agregar Nuevo Profesor</h2>
+                <span class="close" onclick="closeProfesorModal()">&times;</span>
+            </div>
+            <form id="formProfesor" method="POST">
+                <input type="hidden" name="action" value="gestionar_profesor">
+                <input type="hidden" name="profesor_id" id="profesor_id_modal">
+                
+                <div class="form-group">
+                    <label>Nombre:</label>
+                    <input type="text" name="nombre" id="profesor_nombre" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Apellido:</label>
+                    <input type="text" name="apellido" id="profesor_apellido" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Correo:</label>
+                    <input type="email" name="correo" id="profesor_correo">
+                </div>
+                
+                <div class="form-group">
+                    <label>Teléfono:</label>
+                    <input type="tel" name="telefono" id="profesor_telefono">
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeProfesorModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btnGuardarProfesor">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para detalles de tarjeta -->
+    <div id="modalDetallesTarjeta" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Detalles de la Tarjeta</h2>
+                <span class="close" onclick="closeDetallesModal()">&times;</span>
+            </div>
+            <div id="detallesTarjeta">
+                <!-- Los detalles se cargarán aquí -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeDetallesModal()">Cerrar</button>
+                <button class="btn btn-primary" onclick="duplicarTarjeta()">Duplicar</button>
+                <button class="btn btn-danger" onclick="eliminarTarjeta()">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <a href="index.php" class="back-button">← Volver al Inicio</a>
+
+    <script>
+        let tarjetaActual = null;
+        let itinerariosData = <?php 
+            $itinerarios_array = [];
+            $itinerarios->data_seek(0);
+            while ($itinerario = $itinerarios->fetch_assoc()) {
+                $itinerarios_array[] = $itinerario;
+            }
+            echo json_encode($itinerarios_array);
+        ?>;
+
+        function changeMonth(delta) {
+            const urlParams = new URLSearchParams(window.location.search);
+            let mes = parseInt(urlParams.get('mes')) || new Date().getMonth() + 1;
+            let anio = parseInt(urlParams.get('anio')) || new Date().getFullYear();
+            
+            mes += delta;
+            if (mes > 12) {
+                mes = 1;
+                anio++;
+            } else if (mes < 1) {
+                mes = 12;
+                anio--;
+            }
+            
+            urlParams.set('mes', mes);
+            urlParams.set('anio', anio);
+            window.location.search = urlParams.toString();
+        }
+
+        function filterByTurno(turnoId) {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (turnoId > 0) {
+                urlParams.set('turno', turnoId);
+            } else {
+                urlParams.delete('turno');
+            }
+            window.location.search = urlParams.toString();
+        }
+
+        function openModal() {
+            document.getElementById('modalNuevaTarjeta').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('modalNuevaTarjeta').style.display = 'none';
+            
+            // Limpiar búsqueda de materias
+            document.getElementById('buscar_materia').value = '';
+            // Resetear select de materias
+            document.getElementById('materia_hidden').value = '';
+            document.getElementById('materia_selected_text').textContent = 'Seleccionar materia';
+            // Mostrar todas las materias
+            document.querySelectorAll('#materia_options .custom-select-option').forEach(option => {
+                option.classList.remove('hidden', 'selected');
+            });
+            
+            // Limpiar búsqueda de profesores
+            document.getElementById('buscar_profesor').value = '';
+            // Resetear select de profesores
+            document.getElementById('profesor_hidden').value = '';
+            document.getElementById('profesor_selected_text').textContent = 'Seleccionar profesor';
+            // Mostrar todos los profesores
+            document.querySelectorAll('#profesor_options .custom-select-option').forEach(option => {
+                option.classList.remove('hidden', 'selected');
+            });
+            
+            // Ocultar secciones dinámicas
+            document.getElementById('profesor_section').style.display = 'none';
+            document.getElementById('profesor_actual').style.display = 'none';
+            document.getElementById('profesor_selector').style.display = 'none';
+            
+            // Cerrar todos los dropdowns
+            document.querySelectorAll('.custom-select-container').forEach(container => {
+                container.classList.remove('open');
+                const dropdown = container.querySelector('.custom-select-dropdown');
+                if (dropdown) {
+                    dropdown.style.display = 'none';
+                }
+            });
+        }
+
+        function showTarjetaDetails(tarjeta) {
+            tarjetaActual = tarjeta;
+            const detalles = document.getElementById('detallesTarjeta');
+            
+            detalles.innerHTML = `
+                <div style="margin-bottom: 15px;">
+                    <strong>Fecha:</strong> ${new Date(tarjeta.fecha).toLocaleDateString('es-ES')}
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>Turno:</strong> ${tarjeta.turno_nombre} (${tarjeta.hora_inicio} - ${tarjeta.hora_fin})
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>Itinerario:</strong> ${tarjeta.itinerario_nombre}
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>Materia:</strong> ${tarjeta.materia_nombre}
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>Profesor:</strong> ${tarjeta.profesor_nombre}
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>Aula:</strong> ${tarjeta.aula_nombre} (Capacidad: ${tarjeta.capacidad})
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>Estado:</strong> <span style="text-transform: capitalize;">${tarjeta.estado}</span>
+                </div>
+            `;
+            
+            document.getElementById('modalDetallesTarjeta').style.display = 'block';
+        }
+
+        function closeDetallesModal() {
+            document.getElementById('modalDetallesTarjeta').style.display = 'none';
+            tarjetaActual = null;
+        }
+
+        function duplicarTarjeta() {
+            if (!tarjetaActual) return;
+            
+            const nuevaFecha = prompt('Ingrese la nueva fecha (YYYY-MM-DD):', tarjetaActual.fecha);
+            if (nuevaFecha) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `
+                    <input type="hidden" name="action" value="duplicate_tarjeta">
+                    <input type="hidden" name="id_tarjeta" value="${tarjetaActual.id_tarjeta}">
+                    <input type="hidden" name="nueva_fecha" value="${nuevaFecha}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        function eliminarTarjeta() {
+            if (!tarjetaActual) return;
+            
+            if (confirm('¿Está seguro de que desea eliminar esta tarjeta?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `
+                    <input type="hidden" name="action" value="delete_tarjeta">
+                    <input type="hidden" name="id_tarjeta" value="${tarjetaActual.id_tarjeta}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        // Filtrar itinerarios por turno seleccionado
+        function filtrarItinerariosPorTurno(turnoId) {
+            const itinerarioSelect = document.getElementById('itinerario_select');
+            itinerarioSelect.innerHTML = '<option value="">Seleccionar horario</option>';
+            
+            if (turnoId) {
+                const itinerariosFiltrados = itinerariosData.filter(item => item.turno_id == turnoId);
+                itinerariosFiltrados.forEach(itinerario => {
+                    const option = document.createElement('option');
+                    option.value = itinerario.id_itinerario;
+                    option.textContent = `${itinerario.hora_inicio} - ${itinerario.hora_fin}`;
+                    itinerarioSelect.appendChild(option);
+                });
+                itinerarioSelect.disabled = false;
+            } else {
+                itinerarioSelect.disabled = true;
+            }
+        }
+
+        // Verificar disponibilidad de aula
+        function verificarDisponibilidadAula() {
+            const fecha = document.querySelector('input[name="fecha"]').value;
+            const turnoId = document.querySelector('select[name="turno_id"]').value;
+            const itinerarioId = document.querySelector('select[name="itinerario_id"]').value;
+            const aulaId = document.querySelector('select[name="aula_id"]').value;
+            
+            if (fecha && turnoId && itinerarioId && aulaId) {
+                // Aquí podrías hacer una llamada AJAX para verificar disponibilidad
+                // Por ahora solo mostramos un mensaje
+                console.log('Verificando disponibilidad para:', {fecha, turnoId, itinerarioId, aulaId});
+            }
+        }
+
+        // Función para abrir/cerrar el select de materias
+        function toggleMateriaSelect() {
+            const container = document.querySelector('.custom-select-container');
+            const dropdown = document.getElementById('materia_dropdown');
+            
+            if (container.classList.contains('open')) {
+                container.classList.remove('open');
+                dropdown.style.display = 'none';
+            } else {
+                container.classList.add('open');
+                dropdown.style.display = 'block';
+                document.getElementById('buscar_materia').focus();
+            }
+        }
+
+        // Función para normalizar texto (remover acentos)
+        function normalizarTexto(texto) {
+            return texto.normalize('NFD')
+                       .replace(/[\u0300-\u036f]/g, '') // Remover diacríticos
+                       .toLowerCase();
+        }
+
+        // Función para filtrar materias por búsqueda
+        function filtrarMaterias(busqueda) {
+            const options = document.querySelectorAll('.custom-select-option');
+            const textoBusquedaNormalizado = normalizarTexto(busqueda);
+            
+            options.forEach(option => {
+                const nombre = option.getAttribute('data-nombre');
+                const nombreNormalizado = normalizarTexto(nombre);
+                
+                if (nombreNormalizado.includes(textoBusquedaNormalizado)) {
+                    option.classList.remove('hidden');
+                } else {
+                    option.classList.add('hidden');
+                }
+            });
+        }
+
+        // Función para seleccionar una materia
+        function selectMateria(element) {
+            const value = element.getAttribute('data-value');
+            const nombre = element.getAttribute('data-nombre');
+            const carrera = element.getAttribute('data-carrera');
+            const curso = element.getAttribute('data-curso');
+            const profesorId = element.getAttribute('data-profesor-id');
+            
+            document.getElementById('materia_hidden').value = value;
+            document.getElementById('materia_selected_text').textContent = nombre;
+            
+            // Remover selección anterior
+            document.querySelectorAll('#materia_options .custom-select-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            // Marcar como seleccionada
+            element.classList.add('selected');
+            
+            // Cerrar dropdown
+            document.querySelector('.custom-select-container').classList.remove('open');
+            document.getElementById('materia_dropdown').style.display = 'none';
+            
+            // Manejar la sección de profesor
+            manejarSeccionProfesor(profesorId);
+        }
+
+
+
+        // Función para manejar la sección de profesor
+        function manejarSeccionProfesor(profesorId) {
+            const profesorSection = document.getElementById('profesor_section');
+            const profesorActual = document.getElementById('profesor_actual');
+            const profesorSelector = document.getElementById('profesor_selector');
+            
+            profesorSection.style.display = 'block';
+            
+            if (profesorId && profesorId !== '') {
+                // La materia tiene un profesor asignado
+                mostrarProfesorActual(profesorId);
+                profesorActual.style.display = 'block';
+                profesorSelector.style.display = 'none';
+            } else {
+                // La materia no tiene profesor asignado
+                profesorActual.style.display = 'none';
+                profesorSelector.style.display = 'block';
+                document.getElementById('profesor_hidden').value = '';
+            }
+        }
+
+        // Función para mostrar el profesor actual
+        function mostrarProfesorActual(profesorId) {
+            // Buscar el profesor en las opciones disponibles
+            const profesorOption = document.querySelector(`#profesor_options .custom-select-option[data-value="${profesorId}"]`);
+            if (profesorOption) {
+                const nombreProfesor = profesorOption.getAttribute('data-nombre');
+                document.getElementById('profesor_nombre_actual').textContent = nombreProfesor;
+                document.getElementById('profesor_hidden').value = profesorId;
+            }
+        }
+
+        // Función para cambiar profesor
+        function cambiarProfesor() {
+            document.getElementById('profesor_actual').style.display = 'none';
+            document.getElementById('profesor_selector').style.display = 'block';
+            document.getElementById('profesor_hidden').value = '';
+        }
+
+        // Función para eliminar profesor
+        function eliminarProfesor() {
+            document.getElementById('profesor_actual').style.display = 'none';
+            document.getElementById('profesor_selector').style.display = 'block';
+            document.getElementById('profesor_hidden').value = '';
+            document.getElementById('profesor_nombre_actual').textContent = '';
+        }
+
+        // Variables globales para gestión de profesores
+        let modoProfesor = 'agregar'; // 'agregar' o 'editar'
+        let profesorActual = null;
+
+        // Función para agregar nuevo profesor
+        function agregarNuevoProfesor() {
+            modoProfesor = 'agregar';
+            document.getElementById('modalProfesorTitulo').textContent = 'Agregar Nuevo Profesor';
+            document.getElementById('btnGuardarProfesor').textContent = 'Guardar';
+            
+            // Limpiar formulario
+            document.getElementById('formProfesor').reset();
+            document.getElementById('profesor_id_modal').value = '';
+            
+            // Mostrar modal
+            document.getElementById('modalProfesor').style.display = 'block';
+        }
+
+        // Función para editar profesor
+        function editarProfesor(profesorId) {
+            modoProfesor = 'editar';
+            document.getElementById('modalProfesorTitulo').textContent = 'Editar Profesor';
+            document.getElementById('btnGuardarProfesor').textContent = 'Actualizar';
+            
+            // Buscar datos del profesor
+            const profesorOption = document.querySelector(`.profesor-option[data-value="${profesorId}"]`);
+            if (profesorOption) {
+                const profesorData = JSON.parse(profesorOption.getAttribute('data-profesor'));
+                profesorActual = profesorData;
+                
+                // Llenar formulario
+                document.getElementById('profesor_id_modal').value = profesorData.id_profesor;
+                document.getElementById('profesor_nombre').value = profesorData.nombre;
+                document.getElementById('profesor_apellido').value = profesorData.apellido;
+                document.getElementById('profesor_correo').value = profesorData.correo || '';
+                document.getElementById('profesor_telefono').value = profesorData.telefono || '';
+                
+                // Mostrar modal
+                document.getElementById('modalProfesor').style.display = 'block';
+            }
+        }
+
+        // Función para eliminar profesor
+        function eliminarProfesor(profesorId) {
+            if (confirm('¿Está seguro de que desea eliminar este profesor?')) {
+                // Crear formulario para eliminar
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `
+                    <input type="hidden" name="action" value="eliminar_profesor">
+                    <input type="hidden" name="profesor_id" value="${profesorId}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        // Función para eliminar relación profesor-materia (desde la sección de profesor actual)
+        function eliminarRelacionProfesor() {
+            const materiaId = document.getElementById('materia_hidden').value;
+            
+            if (materiaId) {
+                const formData = new FormData();
+                formData.append('action', 'eliminar_relacion_materia_profesor');
+                formData.append('materia_id', materiaId);
+                
+                fetch('gestionar_profesores.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Mostrar selector de profesores
+                        document.getElementById('profesor_actual').style.display = 'none';
+                        document.getElementById('profesor_selector').style.display = 'block';
+                        document.getElementById('profesor_hidden').value = '';
+                        document.getElementById('profesor_nombre_actual').textContent = '';
+                    } else {
+                        alert('Error al eliminar relación: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error en la petición:', error);
+                    alert('Error al eliminar la relación');
+                });
+            }
+        }
+
+        // Función para cerrar modal de profesor
+        function closeProfesorModal() {
+            document.getElementById('modalProfesor').style.display = 'none';
+            profesorActual = null;
+        }
+
+        // Función para abrir/cerrar el select de profesores
+        function toggleProfesorSelect() {
+            const container = document.querySelectorAll('.custom-select-container')[1]; // El segundo container
+            const dropdown = document.getElementById('profesor_dropdown');
+            
+            if (container.classList.contains('open')) {
+                container.classList.remove('open');
+                dropdown.style.display = 'none';
+            } else {
+                container.classList.add('open');
+                dropdown.style.display = 'block';
+                document.getElementById('buscar_profesor').focus();
+            }
+        }
+
+        // Función para filtrar profesores por búsqueda
+        function filtrarProfesores(busqueda) {
+            const options = document.querySelectorAll('#profesor_options .custom-select-option');
+            const textoBusquedaNormalizado = normalizarTexto(busqueda);
+            
+            options.forEach(option => {
+                const nombre = option.getAttribute('data-nombre');
+                const nombreNormalizado = normalizarTexto(nombre);
+                
+                if (nombreNormalizado.includes(textoBusquedaNormalizado)) {
+                    option.classList.remove('hidden');
+                } else {
+                    option.classList.add('hidden');
+                }
+            });
+        }
+
+        // Función para seleccionar un profesor
+        function selectProfesor(element) {
+            const value = element.getAttribute('data-value');
+            const nombre = element.getAttribute('data-nombre');
+            const materiaId = document.getElementById('materia_hidden').value;
+            
+            document.getElementById('profesor_hidden').value = value;
+            document.getElementById('profesor_selected_text').textContent = nombre;
+            
+            // Remover selección anterior
+            document.querySelectorAll('#profesor_options .custom-select-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            // Marcar como seleccionada
+            element.classList.add('selected');
+            
+            // Cerrar dropdown
+            document.querySelectorAll('.custom-select-container')[1].classList.remove('open');
+            document.getElementById('profesor_dropdown').style.display = 'none';
+            
+            // Actualizar la relación materia-profesor en la base de datos
+            if (materiaId && value) {
+                actualizarRelacionMateriaProfesor(materiaId, value);
+            }
+        }
+
+        // Función para actualizar la relación materia-profesor
+        function actualizarRelacionMateriaProfesor(materiaId, profesorId) {
+            const formData = new FormData();
+            formData.append('action', 'actualizar_relacion_materia_profesor');
+            formData.append('materia_id', materiaId);
+            formData.append('profesor_id', profesorId);
+            
+            fetch('gestionar_profesores.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Relación materia-profesor actualizada correctamente');
+                    // Opcional: mostrar mensaje de éxito
+                    // alert('Profesor asignado a la materia correctamente');
+                } else {
+                    console.error('Error al actualizar relación:', data.message);
+                    // Opcional: mostrar mensaje de error
+                    // alert('Error al asignar profesor: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error en la petición:', error);
+            });
+        }
+
+        // Función para ocultar mensajes automáticamente
+        function ocultarMensajes() {
+            const mensajes = document.querySelectorAll('.success-message');
+            mensajes.forEach(mensaje => {
+                setTimeout(() => {
+                    mensaje.style.opacity = '0';
+                    setTimeout(() => {
+                        mensaje.style.display = 'none';
+                    }, 300);
+                }, 3000);
+            });
+        }
+
+        // Event listeners para el formulario
+        document.addEventListener('DOMContentLoaded', function() {
+            const turnoSelect = document.querySelector('select[name="turno_id"]');
+            const itinerarioSelect = document.getElementById('itinerario_select');
+            const fechaInput = document.querySelector('input[name="fecha"]');
+            const aulaSelect = document.querySelector('select[name="aula_id"]');
+            const buscarMateria = document.getElementById('buscar_materia');
+            const buscarProfesor = document.getElementById('buscar_profesor');
+            
+            turnoSelect.addEventListener('change', function() {
+                filtrarItinerariosPorTurno(this.value);
+            });
+            
+            itinerarioSelect.addEventListener('change', verificarDisponibilidadAula);
+            aulaSelect.addEventListener('change', verificarDisponibilidadAula);
+            fechaInput.addEventListener('change', verificarDisponibilidadAula);
+            
+            // Búsqueda de materias
+            buscarMateria.addEventListener('input', function() {
+                filtrarMaterias(this.value);
+            });
+            
+            // Búsqueda de profesores
+            buscarProfesor.addEventListener('input', function() {
+                filtrarProfesores(this.value);
+            });
+            
+            // Event listeners para las opciones de materia
+            document.querySelectorAll('#materia_options .custom-select-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    selectMateria(this);
+                });
+            });
+            
+            // Event listeners para las opciones de profesor
+            document.querySelectorAll('#profesor_options .custom-select-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    selectProfesor(this);
+                });
+            });
+            
+            // Cerrar dropdowns al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                const containers = document.querySelectorAll('.custom-select-container');
+                containers.forEach(container => {
+                    if (!container.contains(e.target)) {
+                        container.classList.remove('open');
+                        const dropdown = container.querySelector('.custom-select-dropdown');
+                        if (dropdown) {
+                            dropdown.style.display = 'none';
+                        }
+                    }
+                });
+            });
+            
+            // Ocultar mensajes automáticamente
+            ocultarMensajes();
+            
+            // Event listener para el formulario de profesores
+            document.getElementById('formProfesor').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                formData.append('modo', modoProfesor);
+                
+                fetch('gestionar_profesores.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        closeProfesorModal();
+                        // Recargar la página para actualizar la lista
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al procesar la solicitud');
+                });
+            });
+        });
+
+        // Cerrar modales al hacer clic fuera
+        window.onclick = function(event) {
+            const modalNueva = document.getElementById('modalNuevaTarjeta');
+            const modalDetalles = document.getElementById('modalDetallesTarjeta');
+            const modalProfesor = document.getElementById('modalProfesor');
+            
+            if (event.target === modalNueva) {
+                closeModal();
+            }
+            if (event.target === modalDetalles) {
+                closeDetallesModal();
+            }
+            if (event.target === modalProfesor) {
+                closeProfesorModal();
+            }
+        }
+    </script>
 </body>
 </html>

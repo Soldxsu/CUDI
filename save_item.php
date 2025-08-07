@@ -5,6 +5,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $type = $_POST['type'];
     $id = $_POST['id'];
     
+    error_log("save_item.php - Tipo: $type, ID: $id");
+    
     $table = '';
     $id_field = 'id_' . $type;
     
@@ -31,15 +33,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
         case 'materia':
             $table = 'materias';
-            $nombre = ucwords(strtolower($conn->real_escape_string($_POST['nombre'])));
-            $carrera_id = !empty($_POST['carrera_id']) ? (int)$_POST['carrera_id'] : 'NULL';
-            $curso_pre_admision_id = !empty($_POST['curso_pre_admision_id']) ? (int)$_POST['curso_pre_admision_id'] : 'NULL';
-            $profesor_id = !empty($_POST['profesor_id']) ? (int)$_POST['profesor_id'] : 'NULL';
+            
+            // Función para capitalizar cada palabra
+            function capitalizar_palabras($str) {
+                return mb_convert_case(trim($str), MB_CASE_TITLE, "UTF-8");
+            }
+            
+            $nombre = capitalizar_palabras($conn->real_escape_string($_POST['nombre']));
+            $carrera_id = isset($_POST['carrera_id']) && $_POST['carrera_id'] !== '' ? intval($_POST['carrera_id']) : 'NULL';
+            $curso_pre_admision_id = isset($_POST['curso_pre_admision_id']) && $_POST['curso_pre_admision_id'] !== '' ? intval($_POST['curso_pre_admision_id']) : 'NULL';
+            $profesor_id = isset($_POST['profesor_id']) && $_POST['profesor_id'] !== '' ? intval($_POST['profesor_id']) : 'NULL';
+            
+            if (empty($nombre)) {
+                echo json_encode(['success' => false, 'message' => 'El nombre de la materia es obligatorio']);
+                exit;
+            }
+            
+            // Validar que no se seleccione tanto carrera como curso pre-admisión
+            if ($carrera_id !== 'NULL' && $curso_pre_admision_id !== 'NULL') {
+                echo json_encode(['success' => false, 'message' => 'Una materia no puede pertenecer tanto a una carrera como a un curso pre-admisión']);
+                exit;
+            }
             
             if (!empty($id)) {
-                $sql = "UPDATE $table SET nombre = '$nombre', carrera_id = " . ($carrera_id === 'NULL' ? 'NULL' : $carrera_id) . ", curso_pre_admision_id = " . ($curso_pre_admision_id === 'NULL' ? 'NULL' : $curso_pre_admision_id) . ", profesor_id = " . ($profesor_id === 'NULL' ? 'NULL' : $profesor_id) . " WHERE $id_field = $id";
+                $sql = "UPDATE $table SET nombre='$nombre', carrera_id=$carrera_id, curso_pre_admision_id=$curso_pre_admision_id, profesor_id=$profesor_id WHERE $id_field=$id";
             } else {
-                $sql = "INSERT INTO $table (nombre, carrera_id, curso_pre_admision_id, profesor_id) VALUES ('$nombre', " . ($carrera_id === 'NULL' ? 'NULL' : $carrera_id) . ", " . ($curso_pre_admision_id === 'NULL' ? 'NULL' : $curso_pre_admision_id) . ", " . ($profesor_id === 'NULL' ? 'NULL' : $profesor_id) . ")";
+                $sql = "INSERT INTO $table (nombre, carrera_id, curso_pre_admision_id, profesor_id) VALUES ('$nombre', $carrera_id, $curso_pre_admision_id, $profesor_id)";
             }
             break;
             
@@ -77,13 +96,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             exit;
     }
     
+    error_log("save_item.php - SQL ejecutado: $sql");
     if ($conn->query($sql) === TRUE) {
+        error_log("save_item.php - Operación exitosa");
         if ($type === 'profesor' && empty($id)) {
             echo json_encode(['success' => true, 'new_profesor_id' => $conn->insert_id]);
         } else {
             echo json_encode(['success' => true]);
         }
     } else {
+        error_log("save_item.php - Error en la base de datos: " . $conn->error);
         echo json_encode(['success' => false, 'message' => $conn->error]);
     }
 }

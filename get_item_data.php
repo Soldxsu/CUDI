@@ -5,6 +5,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $type = $_POST['type'];
     $id = isset($_POST['id']) ? $_POST['id'] : null;
     
+    error_log("get_item_data.php - Tipo: $type, ID: $id");
+    
     $table = '';
     $fields = '';
     
@@ -80,6 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 LEFT JOIN cursos_pre_admisiones cp ON m.curso_pre_admision_id = cp.id_curso_pre_admision 
                 LEFT JOIN profesores p ON m.profesor_id = p.id_profesor 
                 WHERE m.$id_field = $id";
+        error_log("get_item_data.php - SQL para materia: $sql");
     } else {
         $sql = "SELECT $fields FROM $table WHERE $id_field = $id";
     }
@@ -87,8 +90,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     if ($result->num_rows > 0) {
         $data = $result->fetch_assoc();
+        error_log("get_item_data.php - Datos encontrados: " . json_encode($data));
         echo json_encode($data);
     } else {
+        error_log("get_item_data.php - No se encontraron datos");
         echo json_encode(['error' => 'Elemento no encontrado']);
     }
 }
