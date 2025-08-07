@@ -26,8 +26,7 @@ $result_dias = $conn->query($sql_dias);
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            background-color: #f4f4f4;
+            margin: 0;         
             color: #333;
         }
         nav.nav {
@@ -162,15 +161,29 @@ $result_dias = $conn->query($sql_dias);
             border-radius:4px;
             margin-left: 10px;
         }
+        #perfil{
+        width: 50px;
+        height: 50px;
+        margin-left: 10px;
+        margin-top:8px;
+        border:none;
+        border-radius:150px;
+        }
+
+        #perfil:hover{
+            background: #969696bb;
+            transition: 0.80s;
+        }
     </style>
 </head>
 <body>
     <nav class="nav">
-        <a href="index.html"><img id="logo" src="img/logo.png" alt="logo"></a>
+        <a href="index.php"><img id="logo" src="img/logo.png" alt="logo"></a>
         <div class="nav-links">
             <a href="disposicionaulica.php">Disposición Áulica</a>
             <a href="#">Insumos</a>
         </div>
+        <a href="perfil.php"><img id="perfil" src="img/perfil.webp"></a>
     </nav>
 
     <div class="content-sections">
@@ -215,8 +228,6 @@ $result_dias = $conn->query($sql_dias);
             <p align="center">Contenido relacionado con insumos (próximamente).</p>
         </div>
     </div>
-    <br><br><br><br><br><br>
-    <a id="out" href="logout.php">Cerrar Sesion</a>
     <?php
     $conn->close();
     ?>

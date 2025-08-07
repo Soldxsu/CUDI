@@ -1,6 +1,7 @@
 <?php
 include 'conexion.php';
 
+$notificacion = '';
 $id_dia = '';
 $jornada_id = ''; 
 $itinerario_id = '';
@@ -28,7 +29,7 @@ if (isset($_GET['id'])) {
         $form_title = 'Modificar Disposición Áulica';
         $submit_label = 'Guardar Cambios';
     } else {
-        echo "<p style='color:red;'>Registro no encontrado.</p>";
+        $notificacion = "<p style='color:red;font-size:25px; border:solid 4px; padding:10px;'>Registro no encontrado.</p>";
     }
 }
 
@@ -41,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // Validación: la hora de fin debe ser mayor que la de inicio
     if (strtotime($hora_fin) <= strtotime($hora_inicio)) {
-        echo "<p style='color:red;'>La hora de fin debe ser mayor que la hora de inicio.</p>";
+        $notificacion = "<p style='color:red; font-size:25px; border:solid 4px; padding:10px;'>La hora de fin debe ser mayor que la hora de inicio.</p>";
     } else {
     // Buscar o crear itinerario
     $itinerario_id = null;
@@ -85,28 +86,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $horario_ocupado = $row['hora_inicio'] . ' - ' . $row['hora_fin'];
             $materia_ocupada = $row['materia'];
             $profe_ocupado = $row['profesor'] . ' ' . $row['apellido'];
-            echo "<p style='color:red;'>No es posible reservar el aula: ya está ocupada por $materia_ocupada ($profe_ocupado) en el horario $horario_ocupado. Intente con otro horario.</p>";
+            $notificacion = "<p style='color:red;font-size:25px; border:solid 4px; padding:10px;'>No es posible reservar el aula: ya está ocupada por $materia_ocupada ($profe_ocupado) en el horario $horario_ocupado. Intente con otro horario.</p>";
         } else if (isset($_POST['id_dia']) && !empty($_POST['id_dia'])) {
         $id_dia = $_POST['id_dia'];
             $sql = "UPDATE dias SET jornada_id = '$jornada_id', itinerario_id = $itinerario_id, materia_id = $materia_id, aula_id = $aula_id, profesor_id = $profesor_id WHERE id_dia = $id_dia";
         if ($conn->query($sql) === TRUE) {
-            echo "<p style='color:green;'>Registro actualizado exitosamente.</p>";
+            $notificacion = "<p style='color:green;font-size:25px; border:solid 4px; padding:10px;'>Registro actualizado exitosamente.</p>";
         } else {
-            echo "<p style='color:red;'>Error al actualizar el registro: " . $conn->error . "</p>";
+            $notificacion = "<p style='color:red;font-size:25px; border:solid 4px; padding:10px;'>Error al actualizar el registro: " . $conn->error . "</p>";
         }
     } else {
             if (empty($profesor_id)) {
-                echo "<p style='color:red;'>No se puede guardar la disposición: la materia seleccionada no tiene profesor asignado.</p>";
+                $notificacion= "<p style='color:red;font-size:25px; border:solid 4px; padding:10px;'>No se puede guardar la disposición: la materia seleccionada no tiene profesor asignado.</p>";
             } else {
                 $sql = "INSERT INTO dias (jornada_id, itinerario_id, materia_id, aula_id, profesor_id) VALUES ('$jornada_id', $itinerario_id, $materia_id, $aula_id, $profesor_id)";
         if ($conn->query($sql) === TRUE) {
-            echo "<p style='color:green;'>Nuevo registro creado exitosamente.</p>";
+            $notificacion = "<p style='color:green;font-size:25px; border:solid 4px; padding:10px;'>Nuevo registro creado exitosamente.</p>";
             $jornada_id = '';
             $itinerario_id = '';
             $materia_id = '';
             $aula_id = '';
         } else {
-            echo "<p style='color:red;'>Error al crear el registro: " . $conn->error . "</p>";
+            $notificacion = "<p style='color:red;font-size:25px; border:solid 4px; padding:10px;'>Error al crear el registro: " . $conn->error . "</p>";
                 }
             }
         }
@@ -131,19 +132,59 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="css/añadir.css">
     <style>
+        * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        }
+
+        html, body {
+        overflow-x: hidden;
+        }
+
         body {
-            background: #f4f7fb;
-            margin: 0;
-            font-family: 'Segoe UI', Arial, sans-serif;
+        min-height: 100vh;
+        font-family: 'Lexend', sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        background: url('img/aula.jpg') no-repeat left center;
+        background-size: cover;
+        position: relative;
         }
+
+        body::before {
+        content: "";
+        position: absolute;
+        right: 0; top: 0;
+        width: 55%; height: 100%;
+        background: linear-gradient(
+            to right,
+            rgb(255, 255, 255),
+            rgb(250, 252, 255),
+            rgb(247, 249, 252),
+            #6BD4E2
+        );
+        clip-path: polygon(0 0, 100% 0, 100% 100%,  100%, 0% 50%);
+        z-index: 0;
+        }
+
         .form-container {
-            max-width: 700px;
-            margin: 48px auto 0 auto;
-            background: #fff;
-            border-radius: 18px;
-            box-shadow: 0 6px 32px rgba(30, 64, 175, 0.13);
-            padding: 44px 38px 38px 38px;
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-width: 600px;
+        margin-right: 5%;
+        padding: 2rem 3rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        box-shadow: none;
+        border: none;
+        background:none;
+        margin-top: -1rem;
         }
+
         .form-container h2 {
             font-size: 2.2em;
             color: #1a237e;
@@ -152,9 +193,32 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
             letter-spacing: 1px;
             text-align: center;
         }
+
         .form-group {
-            margin-bottom: 28px;
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 1.2rem;
         }
+
+        .container-btns {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center; 
+        }
+
+        .btns {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 1.55em;
+        margin-top:0.25em;
+        border: none;
+        color: white;
+        border-radius: 4px;
+        gap: 10px;
+        cursor: pointer;
+        }
+
         .form-group label {
             display: block;
             margin-bottom: 7px;
@@ -176,19 +240,39 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
             outline: none;
             box-shadow: 0 0 0 2px #e3eefd;
         }
+ 
         .select-container {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            flex-wrap: nowrap;
-            width: 100%;
+            position: relative;
+            display: inline-flex;       /* fila en lugar de block */
+            align-items: center;        /* centrar vertical */
+            padding: 3px;               /* espacio para el degradado */
+            border-radius: 6px;
+            background: linear-gradient(to right, #007BFF, #00CFFF);
         }
+
         .select-container select {
-            min-width: 220px;
-            max-width: 400px;
-            font-size: 1.13em;
+            flex: 1;                    /* ocupa todo el ancho posible */
+            border: none;
             height: 48px;
+            padding: 0 0.5em;
+            font-size: 1.13em;
+            border-radius: 4px;
+            background-color: white;
+            appearance: none;
+            -moz-appearance: none;
         }
+
+        .select-container::after {
+        content: "";
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+        font-size: 1.2em;
+        color: #555;
+        }
+
         .btn-action {
             width: 44px;
             height: 44px;
@@ -198,11 +282,10 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #0074ff 60%, #28a745 100%);
+            background: linear-gradient(135deg, #0074ff 60%, #28a78cff 100%);
             color: #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
             cursor: pointer;
-            transition: background 0.18s, box-shadow 0.18s;
+            transition: 1.18s;
             position: relative;
         }
         .btn-action:hover {
@@ -301,21 +384,22 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
         }
         .back-button {
             display: block;
-            margin: 36px auto 0 auto;
             max-width: 350px;
             background: #6c757d;
             color: white;
             text-align: center;
             text-decoration: none;
             border-radius: 7px;
-            padding: 15px 0;
+            padding: 15px;
             font-size: 1.13em;
             font-weight: 600;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             transition: background 0.18s;
+            margin-bottom:32px;
         }
+
         .back-button:hover {
             background: #495057;
+            transition: background 0.98s;
         }
         @media (max-width: 900px) {
             .form-container { padding: 18px 2vw; }
@@ -423,10 +507,69 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
         #modal .close:hover {
             color: #1a237e;
         }
+        .end-btn{
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap:60px;  
+        }
+        .cssbuttons-io-button {
+        background: #2e3cffff;
+        color: white;
+        font-family: inherit;
+        padding: 0.35em;
+        padding-left: 1.2em;
+        font-size: 1.13em;
+        font-weight: 500;
+        border-radius: 0.9em;
+        border: none;
+        letter-spacing: 0.05em;
+        display: flex;
+        align-items: center;
+        box-shadow: inset 0 0 1.6em -0.6em #2e3cffff;
+        overflow: hidden;
+        position: relative;
+        height: 3.5em;
+        padding-right: 3.3em;
+        cursor: pointer;
+        }
+
+        .cssbuttons-io-button .icon {
+        background: white;
+        margin-left: 1em;
+        position: absolute;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 2.2em;
+        width: 2.2em;
+        border-radius: 0.7em;
+        box-shadow: 0.1em 0.1em 0.6em 0.2em #2e3cffff;
+        right: 0.3em;
+        transition: all 0.3s;
+        }
+
+        .cssbuttons-io-button:hover .icon {
+        width: calc(100% - 0.6em);
+        height:50px;
+        }
+
+        .cssbuttons-io-button .icon svg {
+        width: 2.1em;
+        transition: transform 0.3s;
+        color: #2e3cffff;
+        }
+
+        .cssbuttons-io-button:hover .icon svg {
+        transform: translateX(0.1em);
+        }
+
+        .cssbuttons-io-button:active .icon {
+        transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
-    <!-- Iconos apilados a la derecha como links -->
     <div style="position: absolute; top: 32px; right: 48px; display: flex; flex-direction: column; align-items: center; gap: 18px; z-index: 10;">
         <a href="materias.php" style="text-decoration: none;">
             <div style="width: 70px; height: 70px; background: #0074ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
@@ -445,47 +588,63 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
                 <input type="hidden" name="id_dia" value="<?php echo $id_dia; ?>">
             <?php endif; ?>
 
+             <?php if ($notificacion !== ''): ?>
+                <div class="form-container">
+                    <div class="form-group">
+                        <?= $notificacion ?>
+                    </div> 
+                </div>   
+            <?php endif; ?>  
+
             <div class="form-group">
                 <label for="jornada">Jornada:</label>
-                <div class="select-container">
-                    <select id="jornada_id" name="jornada_id" required>
-                        <option value="">Seleccione un día</option>
-                        <?php while ($row = $jornada_options->fetch_assoc()): ?>
-                            <option value="<?php echo $row['id_jornada']; ?>" <?php echo ($jornada_id == $row['id_jornada']) ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($row['dias']); ?>
-                            </option>
-                        <?php endwhile; ?>
-                    </select>
-                    <button type="button" class="btn-action btn-add" onclick="openModal('jornada')">+</button>
-                    <button type="button" class="btn-action btn-edit" onclick="editModal('jornada')">✏️</button>
-                    <button type="button" class="btn-action btn-delete" onclick="deleteItem('jornada')">🗑️</button>
-                </div>
+                <div class="container-btns">
+                    <div class="select-container">
+                        <select id="jornada_id" name="jornada_id" required>
+                            <option value="">Seleccione un día</option>
+                            <?php while ($row = $jornada_options->fetch_assoc()): ?>
+                                <option value="<?php echo $row['id_jornada']; ?>" <?php echo ($jornada_id == $row['id_jornada']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($row['dias']); ?>
+                                </option>
+                            <?php endwhile; ?>
+                        </select>
+                    </div>
+                    <div class="btns">    
+                        <button type="button" class="btn-action btn-add" onclick="openModal('jornada')">+</button>
+                        <button type="button" class="btn-action btn-edit" onclick="editModal('jornada')">✏️</button>
+                        <button type="button" class="btn-action btn-delete" onclick="deleteItem('jornada')">🗑️</button>
+                    </div> 
+                </div>    
             </div>
 
             <div class="form-group">
                 <label for="itinerario_id">Horario Itinerario:</label>
-                <div class="select-container">
-                    <input type="time" id="hora_inicio" name="hora_inicio" required value="<?php echo isset($hora_inicio) ? $hora_inicio : ''; ?>">
-                    <span style="margin: 0 5px;">a</span>
-                    <input type="time" id="hora_fin" name="hora_fin" required value="<?php echo isset($hora_fin) ? $hora_fin : ''; ?>">
-                </div>
+                   <div class="select">         
+                        <input type="time" id="hora_inicio" name="hora_inicio" required value="<?php echo isset($hora_inicio) ? $hora_inicio : ''; ?>">
+                        <span style="margin: 0 5px;">a</span>
+                        <input type="time" id="hora_fin" name="hora_fin" required value="<?php echo isset($hora_fin) ? $hora_fin : ''; ?>">
+                    </div> 
             </div>
 
             <div class="form-group">
                 <label for="aula_id">Aula:</label>
-                <div class="select-container">
-                    <select id="aula_id" name="aula_id" required>
-                        <option value="">Seleccione un aula</option>
-                        <?php while ($row = $aulas_options->fetch_assoc()): ?>
-                            <option value="<?php echo $row['id_aula']; ?>" <?php echo ($aula_id == $row['id_aula']) ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($row['numero']); ?>
-                            </option>
-                        <?php endwhile; ?>
-                    </select>
-                    <button type="button" class="btn-action btn-add" onclick="openModal('aula')">+</button>
-                    <button type="button" class="btn-action btn-edit" onclick="editModal('aula')">✏️</button>
-                    <button type="button" class="btn-action btn-delete" onclick="deleteItem('aula')">🗑️</button>
-                </div>
+                <div class="container-btns">
+                    <div class="select-container">
+                        <select id="aula_id" name="aula_id" required>
+                            <option value="">Seleccione un aula</option>
+                            <?php while ($row = $aulas_options->fetch_assoc()): ?>
+                                <option value="<?php echo $row['id_aula']; ?>" <?php echo ($aula_id == $row['id_aula']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($row['numero']); ?>
+                                </option>
+                            <?php endwhile; ?>
+                        </select>
+                    </div>    
+                        <div class="btns">    
+                        <button type="button" class="btn-action btn-add" onclick="openModal('jornada')">+</button>
+                        <button type="button" class="btn-action btn-edit" onclick="editModal('jornada')">✏️</button>
+                        <button type="button" class="btn-action btn-delete" onclick="deleteItem('jornada')">🗑️</button>
+                    </div>
+                </div>     
             </div>
 
             <div class="form-group">
@@ -551,11 +710,27 @@ $cursos_pre_admision_options = $conn->query("SELECT id_curso_pre_admision, nombr
                 </div>
             </div>
 
-            <div class="form-group">
-                <button type="submit"><?php echo $submit_label; ?></button>
+            <div class="end-btn">
+                <button class="cssbuttons-io-button">
+                    Añadir Disposición
+                    <div class="icon">
+                        <svg
+                        height="24"
+                        width="24"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                        >
+                        <path d="M0 0h24v24H0z" fill="none"></path>
+                        <path
+                            d="M16.172 11l-5.364-5.364 1.414-1.414L20 12l-7.778 7.778-1.414-1.414L16.172 13H4v-2z"
+                            fill="currentColor"
+                        ></path>
+                        </svg>
+                    </div>
+                </button>
+                <a href="disposicionaulica.php" class="back-button">Volver al Listado</a>
             </div>
         </form>
-        <a href="disposicionaulica.php" class="back-button">Volver al Listado</a>
     </div>
 
     <!-- Modal para agregar profesor -->
