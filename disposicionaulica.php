@@ -1,5 +1,6 @@
 <?php
 include 'conexion.php';
+debugFecha(); // Debug de fecha para verificar zona horaria
 
 // Procesar acciones de crear, editar, eliminar tarjetas
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -12,11 +13,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $aula_id = intval($_POST['aula_id']);
             $profesor_id = intval($_POST['profesor_id']);
             
-            $sql = "INSERT INTO tarjetas_disposicion (fecha, turno_id, itinerario_id, materia_id, aula_id, profesor_id, estado) 
-                    VALUES ('$fecha', $turno_id, $itinerario_id, $materia_id, $aula_id, $profesor_id, 'activa')";
+            // Verificar si el turno está lleno para esa fecha
+            // Obtener la capacidad total de todas las aulas activas
+            $sql_total_capacity = "SELECT SUM(capacidad) as capacidad_total FROM aulas WHERE estado = 'activa'";
+            $result_total = $conn->query($sql_total_capacity);
+            $total_capacity = $result_total->fetch_assoc()['capacidad_total'] ?? 0;
+            
+            // Obtener el número de estudiantes ya asignados en ese turno y fecha
+            $sql_estudiantes_asignados = "
+                SELECT SUM(t.cantidad_estudiantes) as estudiantes_asignados
+                FROM tarjetas_disposicion t
+                INNER JOIN itinerario i ON t.itinerario_id = i.id_itinerario
+                WHERE t.fecha = ? AND i.id_turno = ?
+            ";
+            
+            $stmt = $conn->prepare($sql_estudiantes_asignados);
+            $stmt->bind_param('si', $fecha, $turno_id);
+            $stmt->execute();
+            $result_estudiantes = $stmt->get_result();
+            $estudiantes_asignados = $result_estudiantes->fetch_assoc()['estudiantes_asignados'] ?? 0;
+            
+            // Verificar si se puede crear más tarjetas en este turno
+            if ($estudiantes_asignados >= $total_capacity) {
+                header('Location: disposicionaulica.php?error=Turno lleno para esta fecha. Capacidad total: ' . $total_capacity . ', Estudiantes asignados: ' . $estudiantes_asignados);
+                exit;
+            }
+            
+            $cantidad_estudiantes = intval($_POST['cantidad_estudiantes']);
+            
+            $sql = "INSERT INTO tarjetas_disposicion (fecha, turno_id, itinerario_id, materia_id, aula_id, profesor_id, cantidad_estudiantes, estado) 
+                    VALUES ('$fecha', $turno_id, $itinerario_id, $materia_id, $aula_id, $profesor_id, $cantidad_estudiantes, 'activa')";
             
             if ($conn->query($sql)) {
-                header('Location: disposicionaulica.php?success=1');
+                // Calcular capacidad restante después de crear la tarjeta
+                $nueva_capacidad_disponible = $total_capacity - ($estudiantes_asignados + $cantidad_estudiantes);
+                header('Location: disposicionaulica.php?success=1&capacidad_restante=' . $nueva_capacidad_disponible);
                 exit;
             }
         } elseif ($_POST['action'] === 'delete_tarjeta' && isset($_POST['id_tarjeta'])) {
@@ -31,13 +62,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Obtener datos de la tarjeta original
             $original = $conn->query("SELECT * FROM tarjetas_disposicion WHERE id_tarjeta = $id")->fetch_assoc();
             
+            // Verificar si el turno está lleno para la nueva fecha
+            // Obtener la capacidad total de todas las aulas activas
+            $sql_total_capacity = "SELECT SUM(capacidad) as capacidad_total FROM aulas WHERE estado = 'activa'";
+            $result_total = $conn->query($sql_total_capacity);
+            $total_capacity = $result_total->fetch_assoc()['capacidad_total'] ?? 0;
+            
+            // Obtener el número de estudiantes ya asignados en ese turno y fecha
+            $sql_estudiantes_asignados = "
+                SELECT SUM(t.cantidad_estudiantes) as estudiantes_asignados
+                FROM tarjetas_disposicion t
+                INNER JOIN itinerario i ON t.itinerario_id = i.id_itinerario
+                WHERE t.fecha = ? AND i.id_turno = ?
+            ";
+            
+            $stmt = $conn->prepare($sql_estudiantes_asignados);
+            $stmt->bind_param('si', $nueva_fecha, $original['turno_id']);
+            $stmt->execute();
+            $result_estudiantes = $stmt->get_result();
+            $estudiantes_asignados = $result_estudiantes->fetch_assoc()['estudiantes_asignados'] ?? 0;
+            
+            // Verificar si se puede crear más tarjetas en este turno
+            if ($estudiantes_asignados >= $total_capacity) {
+                header('Location: disposicionaulica.php?error=Turno lleno para la fecha seleccionada. Capacidad total: ' . $total_capacity . ', Estudiantes asignados: ' . $estudiantes_asignados);
+                exit;
+            }
+            
             // Crear nueva tarjeta con la nueva fecha
-            $sql = "INSERT INTO tarjetas_disposicion (fecha, turno_id, itinerario_id, materia_id, aula_id, profesor_id, estado) 
-                    VALUES ('$nueva_fecha', {$original['turno_id']}, {$original['itinerario_id']}, {$original['materia_id']}, {$original['aula_id']}, {$original['profesor_id']}, 'duplicada')";
+            $sql = "INSERT INTO tarjetas_disposicion (fecha, turno_id, itinerario_id, materia_id, aula_id, profesor_id, cantidad_estudiantes, estado) 
+                    VALUES ('$nueva_fecha', {$original['turno_id']}, {$original['itinerario_id']}, {$original['materia_id']}, {$original['aula_id']}, {$original['profesor_id']}, {$original['cantidad_estudiantes']}, 'duplicada')";
             
             if ($conn->query($sql)) {
                 header('Location: disposicionaulica.php?duplicated=1');
                 exit;
+            }
+        } elseif ($_POST['action'] === 'update_tarjeta' && isset($_POST['id_tarjeta'])) {
+            $id_tarjeta = intval($_POST['id_tarjeta']);
+            $fecha = $conn->real_escape_string($_POST['fecha']);
+            $turno_id = intval($_POST['turno_id']);
+            $itinerario_id = intval($_POST['itinerario_id']);
+            $materia_id = intval($_POST['materia_id']);
+            $aula_id = intval($_POST['aula_id']);
+            $profesor_id = intval($_POST['profesor_id']);
+            $cantidad_estudiantes = intval($_POST['cantidad_estudiantes']);
+            
+            // Verificar si el turno está lleno para esa fecha (excluyendo la tarjeta actual)
+            $sql_total_capacity = "SELECT SUM(capacidad) as capacidad_total FROM aulas WHERE estado = 'activa'";
+            $result_total = $conn->query($sql_total_capacity);
+            $total_capacity = $result_total->fetch_assoc()['capacidad_total'] ?? 0;
+            
+            // Obtener el número de estudiantes ya asignados en ese turno y fecha (excluyendo la tarjeta actual)
+            $sql_estudiantes_asignados = "
+                SELECT SUM(t.cantidad_estudiantes) as estudiantes_asignados
+                FROM tarjetas_disposicion t
+                INNER JOIN itinerario i ON t.itinerario_id = i.id_itinerario
+                WHERE t.fecha = ? AND i.id_turno = ? AND t.id_tarjeta != ?
+            ";
+            
+            $stmt = $conn->prepare($sql_estudiantes_asignados);
+            $stmt->bind_param('sii', $fecha, $turno_id, $id_tarjeta);
+            $stmt->execute();
+            $result_estudiantes = $stmt->get_result();
+            $estudiantes_asignados = $result_estudiantes->fetch_assoc()['estudiantes_asignados'] ?? 0;
+            
+            // Verificar si se puede actualizar la tarjeta
+            if (($estudiantes_asignados + $cantidad_estudiantes) > $total_capacity) {
+                header('Location: disposicionaulica.php?error=Turno lleno para esta fecha. Capacidad total: ' . $total_capacity . ', Estudiantes asignados: ' . ($estudiantes_asignados + $cantidad_estudiantes));
+                exit;
+            }
+            
+            // Actualizar la tarjeta
+            $sql = "UPDATE tarjetas_disposicion SET 
+                    fecha = ?, turno_id = ?, itinerario_id = ?, materia_id = ?, 
+                    aula_id = ?, profesor_id = ?, cantidad_estudiantes = ?
+                    WHERE id_tarjeta = ?";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param('siiiiiii', $fecha, $turno_id, $itinerario_id, $materia_id, $aula_id, $profesor_id, $cantidad_estudiantes, $id_tarjeta);
+            
+            if ($stmt->execute()) {
+                header('Location: disposicionaulica.php?success=1&mensaje=Tarjeta actualizada exitosamente');
+                exit;
+            } else {
+                $error = 'Error al actualizar la tarjeta: ' . $conn->error;
             }
         }
     }
@@ -138,7 +245,7 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
 
         .header-links {
             margin-top: 15px;
-            display: flex;
+        display: flex;
             gap: 20px;
             justify-content: center;
         }
@@ -165,7 +272,7 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.08);
             display: flex;
-            justify-content: space-between;
+        justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 15px;
@@ -267,10 +374,19 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             padding: 10px;
             position: relative;
             background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
         .calendar-day:hover {
             background: #f8faff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(59, 108, 220, 0.15);
+            border-color: #3B6CDC;
+        }
+
+        .calendar-day:active {
+            transform: translateY(0);
         }
 
         .calendar-day.other-month {
@@ -288,7 +404,10 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             font-size: 14px;
             margin-bottom: 8px;
             color: #333;
+            position: relative;
         }
+
+
 
         .tarjeta {
             background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
@@ -315,13 +434,105 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
         }
 
+        .add-tarjeta-day {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            z-index: 10;
+        }
+
+        .btn-add-day {
+            background: #28a745;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .btn-add-day:hover {
+            background: #218838;
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .btn-add-day:active {
+            transform: scale(0.95);
+        }
+
+        .day-capacity-info {
+            position: absolute;
+            bottom: 40px;
+            left: 5px;
+            right: 5px;
+            font-size: 10px;
+            color: #666;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 4px;
+            padding: 2px 4px;
+            border: 1px solid #e3eefd;
+        }
+
+        .day-capacity-info.full {
+            background: rgba(220, 53, 69, 0.1);
+            border-color: #dc3545;
+            color: #dc3545;
+        }
+
+        .day-capacity-info.available {
+            background: rgba(40, 167, 69, 0.1);
+            border-color: #28a745;
+            color: #28a745;
+        }
+
+        /* Estilos para el modal de edición */
+        #modalEditarTarjeta .modal-content {
+            max-width: 600px;
+        }
+
+        #modalEditarTarjeta .form-group {
+            margin-bottom: 15px;
+        }
+
+        #modalEditarTarjeta label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        #modalEditarTarjeta input,
+        #modalEditarTarjeta select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        #modalEditarTarjeta input:focus,
+        #modalEditarTarjeta select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
         .modal {
             display: none;
             position: fixed;
             z-index: 1000;
             left: 0;
             top: 0;
-            width: 100%;
+        width: 100%;
             height: 100%;
             background-color: rgba(0,0,0,0.5);
         }
@@ -329,7 +540,7 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
         .modal-content {
             background-color: white;
             margin: 1% auto 2% auto;
-            padding: 30px;
+        padding: 30px;
             border-radius: 12px;
             width: 90%;
             max-width: 500px;
@@ -394,7 +605,7 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             border: 2px solid #e3eefd;
             border-radius: 6px;
             font-size: 14px;
-            box-sizing: border-box;
+        box-sizing: border-box;
         }
 
         .form-group input:focus,
@@ -458,10 +669,10 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
         }
 
         .custom-select-dropdown {
-            position: absolute;
+        position: absolute;
             top: 100%;
-            left: 0;
-            right: 0;
+        left: 0;
+        right: 0;
             background: white;
             border: 2px solid #3B6CDC;
             border-top: none;
@@ -511,7 +722,7 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
 
         /* Estilos para las opciones de materia */
         .materia-option-content {
-            display: flex;
+        display: flex;
             flex-direction: column;
             gap: 2px;
         }
@@ -581,7 +792,7 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
 
         .profesor-dropdown-header .search-input {
             flex: 1;
-            margin: 0;
+        margin: 0;
             border: none;
             background: transparent;
         }
@@ -598,7 +809,7 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             border-radius: 4px;
             width: 24px;
             height: 24px;
-            cursor: pointer;
+        cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -682,6 +893,15 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             background: #5a6268;
         }
 
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
         .btn-danger {
             background: #dc3545;
             color: white;
@@ -700,6 +920,45 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             border: 1px solid #c3e6cb;
             opacity: 1;
             transition: opacity 0.3s ease;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .info-box strong {
+            color: #0056b3;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .info-box span {
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .form-group input[type="number"] {
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input[type="number"]:focus {
+            outline: none;
+            border-color: #007bff;
         }
 
         .back-button {
@@ -754,11 +1013,17 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
         <div class="header-links">
             <a href="materias.php" class="header-link">Materias</a>
             <a href="profesores.php" class="header-link">Profesores</a>
+            <a href="detalle_dia.php?fecha=<?php echo date('Y-m-d'); ?>" class="header-link">Ver Hoy</a>
         </div>
     </div>
 
     <?php if (isset($_GET['success'])): ?>
-        <div class="success-message">Tarjeta creada exitosamente</div>
+        <div class="success-message">
+            Tarjeta creada exitosamente
+            <?php if (isset($_GET['capacidad_restante'])): ?>
+                <br><small>Capacidad restante en el turno: <?php echo intval($_GET['capacidad_restante']); ?> estudiantes</small>
+            <?php endif; ?>
+        </div>
     <?php endif; ?>
 
     <?php if (isset($_GET['deleted'])): ?>
@@ -769,11 +1034,15 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
         <div class="success-message">Tarjeta duplicada exitosamente</div>
     <?php endif; ?>
 
+    <?php if (isset($_GET['error'])): ?>
+        <div class="error-message"><?php echo htmlspecialchars($_GET['error']); ?></div>
+    <?php endif; ?>
+
     <div class="controls">
         <div class="month-navigation">
-            <button onclick="changeMonth(-1)">← Anterior</button>
+            <button onclick="changeMonth(-1)">Anterior</button>
             <div class="current-month"><?php echo $meses[$mes] . ' ' . $anio; ?></div>
-            <button onclick="changeMonth(1)">Siguiente →</button>
+            <button onclick="changeMonth(1)">Siguiente</button>
         </div>
 
         <div class="filters">
@@ -790,10 +1059,11 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
     </div>
 
     <div class="calendar">
+
         <div class="calendar-header">
             <?php foreach ($dias_semana as $dia): ?>
                 <div><?php echo $dia; ?></div>
-            <?php endforeach; ?>
+                <?php endforeach; ?>
         </div>
         
         <div class="calendar-grid">
@@ -816,18 +1086,32 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
                 $clase_dia = $es_otro_mes ? 'other-month' : '';
                 if ($es_hoy) $clase_dia .= ' today';
             ?>
-                <div class="calendar-day <?php echo $clase_dia; ?>" data-fecha="<?php echo $fecha_str; ?>">
+                <div class="calendar-day <?php echo $clase_dia; ?>" data-fecha="<?php echo $fecha_str; ?>" onclick="openDayDetail('<?php echo $fecha_str; ?>')">
                     <div class="day-number"><?php echo $fecha_actual->format('j'); ?></div>
                     
                     <?php if (isset($tarjetas_por_fecha[$fecha_str])): ?>
                         <?php foreach ($tarjetas_por_fecha[$fecha_str] as $tarjeta): ?>
                             <div class="tarjeta <?php echo $tarjeta['estado']; ?>" 
-                                 onclick="showTarjetaDetails(<?php echo htmlspecialchars(json_encode($tarjeta)); ?>)">
+                                 onclick="event.stopPropagation(); showTarjetaDetails(<?php echo htmlspecialchars(json_encode($tarjeta)); ?>)">
                                 <strong><?php echo $tarjeta['turno_nombre']; ?></strong><br>
                                 <?php echo $tarjeta['materia_nombre']; ?><br>
                                 <small><?php echo $tarjeta['aula_nombre']; ?></small>
                             </div>
                         <?php endforeach; ?>
+                    <?php endif; ?>
+                    
+                    <!-- Información de capacidad del día -->
+                    <?php if (!$es_otro_mes): ?>
+                        <div class="day-capacity-info" id="capacity-<?php echo $fecha_str; ?>">
+                            <!-- Se llenará dinámicamente con JavaScript -->
+                        </div>
+                        
+                        <!-- Botón para crear tarjeta en este día específico - SIEMPRE visible -->
+                        <div class="add-tarjeta-day" onclick="event.stopPropagation(); openModalForDate('<?php echo $fecha_str; ?>')">
+                            <button class="btn-add-day" title="Crear tarjeta para este día">
+                                <span>+</span>
+                            </button>
+                        </div>
                     <?php endif; ?>
                 </div>
             <?php
@@ -981,6 +1265,26 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
                         <?php endwhile; ?>
                     </select>
                 </div>
+
+                <div class="form-group">
+                    <label>Cantidad de Estudiantes:</label>
+                    <input type="number" name="cantidad_estudiantes" min="1" required>
+                </div>
+
+                <!-- Información de capacidad del turno -->
+                <div id="info_capacidad_turno" class="form-group" style="display: none;">
+                    <div class="info-box">
+                        <strong>Información del Turno:</strong>
+                        <div id="capacidad_info">
+                            <span>Capacidad total del turno: <span id="capacidad_total">0</span> estudiantes</span><br>
+                            <span>Estudiantes ya asignados: <span id="estudiantes_asignados">0</span></span><br>
+                            <span>Capacidad disponible: <span id="capacidad_disponible">0</span> estudiantes</span>
+                        </div>
+                        <div style="margin-top: 10px; font-size: 14px; color: #666;">
+                            <em>💡 Puedes crear múltiples tarjetas en el mismo turno hasta que se alcance la capacidad total.</em>
+                        </div>
+                    </div>
+                </div>
                 
 
                 
@@ -1043,9 +1347,97 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             </div>
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeDetallesModal()">Cerrar</button>
+                <button class="btn btn-warning" onclick="editarTarjeta()">Editar</button>
                 <button class="btn btn-primary" onclick="duplicarTarjeta()">Duplicar</button>
                 <button class="btn btn-danger" onclick="eliminarTarjeta()">Eliminar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar tarjeta -->
+    <div id="modalEditarTarjeta" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Editar Tarjeta</h2>
+                <span class="close" onclick="closeEditarModal()">&times;</span>
+            </div>
+            <form id="formEditarTarjeta" method="POST">
+                <input type="hidden" name="action" value="update_tarjeta">
+                <input type="hidden" name="id_tarjeta" id="edit_id_tarjeta">
+                
+                <div class="form-group">
+                    <label>Fecha:</label>
+                    <input type="date" name="fecha" id="edit_fecha" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Turno:</label>
+                    <select name="turno_id" id="edit_turno_id" required>
+                        <option value="">Seleccionar turno</option>
+                        <?php $turnos->data_seek(0); while ($turno = $turnos->fetch_assoc()): ?>
+                            <option value="<?php echo $turno['id_turno']; ?>">
+                                <?php echo $turno['nombre']; ?> (<?php echo $turno['hora_inicio']; ?> - <?php echo $turno['hora_fin']; ?>)
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Horario:</label>
+                    <select name="itinerario_id" id="edit_itinerario_id" required>
+                        <option value="">Seleccionar horario</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Materia:</label>
+                    <select name="materia_id" id="edit_materia_id" required>
+                        <option value="">Seleccionar materia</option>
+                        <?php $materias->data_seek(0); while ($materia = $materias->fetch_assoc()): ?>
+                            <option value="<?php echo $materia['id_materia']; ?>">
+                                <?php echo $materia['nombre']; ?>
+                                <?php if ($materia['carrera_nombre']): ?>
+                                    (<?php echo $materia['carrera_nombre']; ?>)
+                                <?php endif; ?>
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Profesor:</label>
+                    <select name="profesor_id" id="edit_profesor_id" required>
+                        <option value="">Seleccionar profesor</option>
+                        <?php $profesores->data_seek(0); while ($profesor = $profesores->fetch_assoc()): ?>
+                            <option value="<?php echo $profesor['id_profesor']; ?>">
+                                <?php echo $profesor['nombre'] . ' ' . $profesor['apellido']; ?>
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Aula:</label>
+                    <select name="aula_id" id="edit_aula_id" required>
+                        <option value="">Seleccionar aula</option>
+                        <?php $aulas->data_seek(0); while ($aula = $aulas->fetch_assoc()): ?>
+                            <option value="<?php echo $aula['id_aula']; ?>">
+                                <?php echo $aula['nombre']; ?> (Cap: <?php echo $aula['capacidad']; ?>)
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Cantidad de Estudiantes:</label>
+                    <input type="number" name="cantidad_estudiantes" id="edit_cantidad_estudiantes" min="1" required>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditarModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar Tarjeta</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -1061,6 +1453,10 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             }
             echo json_encode($itinerarios_array);
         ?>;
+
+        function openDayDetail(fecha) {
+            window.location.href = `detalle_dia.php?fecha=${fecha}`;
+        }
 
         function changeMonth(delta) {
             const urlParams = new URLSearchParams(window.location.search);
@@ -1093,6 +1489,11 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
 
         function openModal() {
             document.getElementById('modalNuevaTarjeta').style.display = 'block';
+        }
+
+        function openModalForDate(fecha) {
+            document.getElementById('modalNuevaTarjeta').style.display = 'block';
+            document.querySelector('input[name="fecha"]').value = fecha;
         }
 
         function closeModal() {
@@ -1169,6 +1570,30 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             tarjetaActual = null;
         }
 
+        function closeEditarModal() {
+            document.getElementById('modalEditarTarjeta').style.display = 'none';
+        }
+
+        function filtrarItinerariosEdicion(turnoId) {
+            const itinerarioSelect = document.getElementById('edit_itinerario_id');
+            itinerarioSelect.innerHTML = '<option value="">Seleccionar horario</option>';
+            
+            if (turnoId) {
+                const itinerariosFiltrados = itinerariosData.filter(item => item.turno_id == turnoId);
+                itinerariosFiltrados.forEach(itinerario => {
+                    const option = document.createElement('option');
+                    option.value = itinerario.id_itinerario;
+                    option.textContent = `${itinerario.hora_inicio} - ${itinerario.hora_fin}`;
+                    itinerarioSelect.appendChild(option);
+                });
+                
+                // Seleccionar el itinerario actual si existe
+                if (tarjetaActual && tarjetaActual.itinerario_id) {
+                    itinerarioSelect.value = tarjetaActual.itinerario_id;
+                }
+            }
+        }
+
         function duplicarTarjeta() {
             if (!tarjetaActual) return;
             
@@ -1176,6 +1601,7 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             if (nuevaFecha) {
                 const form = document.createElement('form');
                 form.method = 'POST';
+                form.action = window.location.href;
                 form.innerHTML = `
                     <input type="hidden" name="action" value="duplicate_tarjeta">
                     <input type="hidden" name="id_tarjeta" value="${tarjetaActual.id_tarjeta}">
@@ -1186,12 +1612,33 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             }
         }
 
+        function editarTarjeta() {
+            if (!tarjetaActual) return;
+            
+            // Llenar el formulario de edición con los datos actuales
+            document.getElementById('edit_id_tarjeta').value = tarjetaActual.id_tarjeta;
+            document.getElementById('edit_fecha').value = tarjetaActual.fecha;
+            document.getElementById('edit_turno_id').value = tarjetaActual.turno_id;
+            document.getElementById('edit_materia_id').value = tarjetaActual.materia_id;
+            document.getElementById('edit_profesor_id').value = tarjetaActual.profesor_id;
+            document.getElementById('edit_aula_id').value = tarjetaActual.aula_id;
+            document.getElementById('edit_cantidad_estudiantes').value = tarjetaActual.cantidad_estudiantes || 0;
+            
+            // Cargar itinerarios para el turno seleccionado
+            filtrarItinerariosEdicion(tarjetaActual.turno_id);
+            
+            // Cerrar modal de detalles y abrir modal de edición
+            closeDetallesModal();
+            document.getElementById('modalEditarTarjeta').style.display = 'block';
+        }
+
         function eliminarTarjeta() {
             if (!tarjetaActual) return;
             
             if (confirm('¿Está seguro de que desea eliminar esta tarjeta?')) {
                 const form = document.createElement('form');
                 form.method = 'POST';
+                form.action = window.location.href;
                 form.innerHTML = `
                     <input type="hidden" name="action" value="delete_tarjeta">
                     <input type="hidden" name="id_tarjeta" value="${tarjetaActual.id_tarjeta}">
@@ -1601,7 +2048,54 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             
             // Ocultar mensajes automáticamente
             ocultarMensajes();
+
+            // Cargar información de capacidad de todos los días
+            cargarCapacidadDias();
+
+            // Event listener para calcular capacidad del turno
+            turnoSelect.addEventListener('change', function() {
+                calcularCapacidadTurno();
+            });
             
+            fechaInput.addEventListener('change', function() {
+                if (turnoSelect.value) {
+                    calcularCapacidadTurno();
+                }
+            });
+
+            // Event listener para el turno en el modal de edición
+            document.getElementById('edit_turno_id').addEventListener('change', function() {
+                filtrarItinerariosEdicion(this.value);
+            });
+            
+            // Event listener para el formulario de creación de tarjetas
+            document.querySelector('form[action=""]').addEventListener('submit', function(e) {
+                const cantidadEstudiantes = parseInt(document.querySelector('input[name="cantidad_estudiantes"]').value);
+                const capacidadDisponible = parseInt(document.getElementById('capacidad_disponible').textContent);
+                
+                if (cantidadEstudiantes > capacidadDisponible) {
+                    e.preventDefault();
+                    alert(`No se puede crear la tarjeta. La cantidad de estudiantes (${cantidadEstudiantes}) excede la capacidad disponible (${capacidadDisponible}) en este turno.`);
+                    return false;
+                }
+            });
+
+            // Event listener para la cantidad de estudiantes
+            document.querySelector('input[name="cantidad_estudiantes"]').addEventListener('input', function() {
+                if (this.value && document.getElementById('info_capacidad_turno').style.display !== 'none') {
+                    const cantidadEstudiantes = parseInt(this.value) || 0;
+                    const capacidadDisponible = parseInt(document.getElementById('capacidad_disponible').textContent);
+                    
+                    if (cantidadEstudiantes > capacidadDisponible) {
+                        this.style.borderColor = '#dc3545';
+                        this.title = `La cantidad excede la capacidad disponible (${capacidadDisponible})`;
+                    } else {
+                        this.style.borderColor = '#28a745';
+                        this.title = '';
+                    }
+                }
+            });
+
             // Event listener para el formulario de profesores
             document.getElementById('formProfesor').addEventListener('submit', function(e) {
                 e.preventDefault();
@@ -1630,6 +2124,96 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
                 });
             });
         });
+
+        // Función para calcular la capacidad del turno
+        function calcularCapacidadTurno() {
+            const fecha = document.querySelector('input[name="fecha"]').value;
+            const turnoId = document.querySelector('select[name="turno_id"]').value;
+            
+            if (!fecha || !turnoId) {
+                document.getElementById('info_capacidad_turno').style.display = 'none';
+                return;
+            }
+            
+            // Hacer petición AJAX para obtener la capacidad del turno
+            fetch('get_capacidad_turno.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `fecha=${fecha}&turno_id=${turnoId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('capacidad_total').textContent = data.capacidad_total;
+                    document.getElementById('estudiantes_asignados').textContent = data.estudiantes_asignados;
+                    document.getElementById('capacidad_disponible').textContent = data.capacidad_disponible;
+                    document.getElementById('info_capacidad_turno').style.display = 'block';
+                } else {
+                    console.error('Error al obtener capacidad:', data.message);
+                    document.getElementById('info_capacidad_turno').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('info_capacidad_turno').style.display = 'none';
+            });
+        }
+
+        // Función para cargar la información de capacidad de todos los días del mes
+        function cargarCapacidadDias() {
+            const dias = document.querySelectorAll('.calendar-day:not(.other-month)');
+            dias.forEach(dia => {
+                const fecha = dia.getAttribute('data-fecha');
+                if (fecha) {
+                    cargarCapacidadDia(fecha);
+                }
+            });
+        }
+
+        // Función para cargar la información de capacidad de un día específico
+        function cargarCapacidadDia(fecha) {
+            // Obtener todos los turnos disponibles
+            const turnos = <?php 
+                $turnos_array = [];
+                $turnos->data_seek(0);
+                while ($turno = $turnos->fetch_assoc()) {
+                    $turnos_array[] = $turno;
+                }
+                echo json_encode($turnos_array);
+            ?>;
+            
+            let capacidadTotal = 0;
+            let estudiantesAsignados = 0;
+            
+            // Calcular capacidad total de todas las aulas
+            fetch('get_capacidad_turno.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `fecha=${fecha}&turno_id=0`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const capacityElement = document.getElementById(`capacity-${fecha}`);
+                    if (capacityElement) {
+                        if (data.capacidad_disponible <= 0) {
+                            capacityElement.innerHTML = '<strong>Turno lleno</strong>';
+                            capacityElement.className = 'day-capacity-info full';
+                        } else {
+                            capacityElement.innerHTML = `<strong>Disponible: ${data.capacidad_disponible}</strong>`;
+                            capacityElement.className = 'day-capacity-info available';
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar capacidad del día:', error);
+            });
+        }
 
         // Cerrar modales al hacer clic fuera
         window.onclick = function(event) {

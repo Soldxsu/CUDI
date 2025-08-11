@@ -1,0 +1,13 @@
+# Configuración de zona horaria para Argentina
+php_value date.timezone "America/Argentina/Buenos_Aires"
+
+# Configuración de locale para español
+php_value default_charset "UTF-8"
+
+# Configuración de timezone para MySQL (si es necesario)
+# php_value mysql.default_timezone "America/Argentina/Buenos_Aires"
+
+# Configuración de cache para evitar problemas de zona horaria
+php_value session.cache_limiter "nocache"
+php_value session.use_cookies 1
+php_value session.use_only_cookies 1 
