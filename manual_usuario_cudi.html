@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual de Usuario - Sistema CUDI</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header h2 {
+            margin: 10px 0 0 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .toc {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .toc h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        
+        .toc ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .toc li {
+            margin: 5px 0;
+        }
+        
+        .toc a {
+            color: #333;
+            text-decoration: none;
+        }
+        
+        .toc a:hover {
+            color: #667eea;
+        }
+        
+        h2 {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+        
+        h3 {
+            color: #764ba2;
+            margin-top: 30px;
+        }
+        
+        h4 {
+            color: #555;
+            margin-top: 25px;
+        }
+        
+        .feature-list {
+            background: #e8f4fd;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .feature-list ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .feature-list li {
+            margin: 8px 0;
+        }
+        
+        .step-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .warning-box {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .success-box {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .info-box {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        blockquote {
+            background: #f9f9f9;
+            border-left: 4px solid #ccc;
+            margin: 20px 0;
+            padding: 10px 20px;
+            font-style: italic;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .button {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            display: inline-block;
+            font-weight: bold;
+        }
+        
+        .button-secondary {
+            background: #6c757d;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            display: inline-block;
+            font-weight: bold;
+        }
+        
+        .button-danger {
+            background: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            display: inline-block;
+            font-weight: bold;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            color: #666;
+        }
+        
+        @media print {
+            body {
+                font-size: 12pt;
+            }
+            
+            .header {
+                background: #667eea !important;
+                -webkit-print-color-adjust: exact;
+            }
+            
+            .feature-list, .step-box, .warning-box, .success-box, .info-box {
+                -webkit-print-color-adjust: exact;
+            }
+            
+            h2 {
+                page-break-before: always;
+            }
+            
+            h2:first-of-type {
+                page-break-before: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Manual de Usuario</h1>
+        <h2>Sistema CUDI - Gestión de Disposición Áulica</h2>
+    </div>
+
+    <div class="toc">
+        <h3>Tabla de Contenidos</h3>
+        <ol>
+            <li><a href="#introduccion">Introducción</a></li>
+            <li><a href="#acceso">Acceso al Sistema</a></li>
+            <li><a href="#navegacion">Navegación Principal</a></li>
+            <li><a href="#crear">Crear Nueva Tarjeta</a></li>
+            <li><a href="#gestionar">Gestionar Tarjetas Existentes</a></li>
+            <li><a href="#duplicar">Duplicar Tarjetas</a></li>
+            <li><a href="#eliminar">Eliminar Tarjetas</a></li>
+            <li><a href="#profesores">Gestión de Profesores</a></li>
+            <li><a href="#validaciones">Validaciones y Restricciones</a></li>
+            <li><a href="#problemas">Solución de Problemas</a></li>
+        </ol>
+    </div>
+
+    <h2 id="introduccion">Introducción</h2>
+    
+    <p>El Sistema CUDI es una herramienta de gestión académica que permite administrar la disposición de aulas, asignando materias, profesores y horarios de manera eficiente. El sistema previene conflictos de horarios y garantiza el uso óptimo de los recursos educativos.</p>
+
+    <div class="feature-list">
+        <h3>Características Principales</h3>
+        <ul>
+            <li>✅ <strong>Calendario visual</strong> para gestión de tarjetas</li>
+            <li>✅ <strong>Validación automática</strong> de conflictos de aulas</li>
+            <li>✅ <strong>Duplicación inteligente</strong> de tarjetas</li>
+            <li>✅ <strong>Gestión de profesores</strong> integrada</li>
+            <li>✅ <strong>Operaciones sin recarga</strong> de página (AJAX)</li>
+        </ul>
+    </div>
+
+    <h2 id="acceso">Acceso al Sistema</h2>
+
+    <div class="step-box">
+        <h3>Iniciar Sesión</h3>
+        <ol>
+            <li>Accede a la URL del sistema CUDI</li>
+            <li>Ingresa tus credenciales de usuario</li>
+            <li>Haz clic en <span class="button">"Iniciar Sesión"</span></li>
+        </ol>
+    </div>
+
+    <div class="info-box">
+        <h3>Navegación</h3>
+        <p>Una vez autenticado, serás dirigido al calendario principal donde verás el mes actual con todas las tarjetas de disposición.</p>
+    </div>
+
+    <h2 id="navegacion">Navegación Principal</h2>
+
+    <h3>Calendario</h3>
+    <ul>
+        <li><strong>Vista mensual</strong>: Muestra todos los días del mes actual</li>
+        <li><strong>Navegación</strong>: Usa los botones "Anterior" y "Siguiente" para cambiar de mes</li>
+        <li><strong>Tarjetas</strong>: Cada día puede contener múltiples tarjetas de disposición</li>
+        <li><strong>Colores</strong>: Las tarjetas tienen diferentes colores según su estado:
+            <ul>
+                <li><strong>Verde</strong>: Tarjeta activa</li>
+                <li><strong>Azul</strong>: Tarjeta duplicada</li>
+                <li><strong>Otros colores</strong>: Estados específicos</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>Controles Superiores</h3>
+    <ul>
+        <li><strong>Filtros</strong>: Permite filtrar tarjetas por criterios específicos</li>
+        <li><strong>Botones de acción</strong>: Acceso rápido a funciones principales</li>
+    </ul>
+
+    <h2 id="crear">Crear Nueva Tarjeta</h2>
+
+    <div class="step-box">
+        <h3>Paso 1: Abrir Modal</h3>
+        <ol>
+            <li>Haz clic en el botón <strong>"+"</strong> en cualquier día del calendario</li>
+            <li>Se abrirá el modal "Nueva Tarjeta de Disposición"</li>
+        </ol>
+    </div>
+
+    <h3>Paso 2: Completar Información</h3>
+
+    <h4>Cantidad de Estudiantes</h4>
+    <ul>
+        <li><strong>Campo obligatorio</strong></li>
+        <li>Ingresa el número de estudiantes que asistirán</li>
+        <li>Este dato determina qué aulas están disponibles</li>
+    </ul>
+
+    <h4>Fecha</h4>
+    <ul>
+        <li>Se completa automáticamente con el día seleccionado</li>
+        <li>Puedes modificarla si es necesario</li>
+    </ul>
+
+    <h4>Turno</h4>
+    <p>Selecciona el turno deseado:</p>
+    <ul>
+        <li>Mañana (08:00:00 - 12:00:00)</li>
+        <li>Tarde (13:00:00 - 17:00:00)</li>
+        <li>Noche (18:00:00 - 22:00:00)</li>
+    </ul>
+
+    <h4>Horario</h4>
+    <ul>
+        <li>Se filtran automáticamente según el turno seleccionado</li>
+        <li>Muestra los horarios disponibles para ese turno</li>
+    </ul>
+
+    <h4>Materia</h4>
+    <ul>
+        <li>Usa el campo de búsqueda para encontrar la materia</li>
+        <li>Escribe parte del nombre y selecciona de la lista</li>
+    </ul>
+
+    <h4>Profesor</h4>
+    <ul>
+        <li><strong>Profesor actual</strong>: Si la materia ya tiene un profesor asignado, se muestra automáticamente</li>
+        <li><strong>Cambiar profesor</strong>: Haz clic en <span class="button-secondary">"Cambiar Profesor"</span> para seleccionar otro</li>
+        <li><strong>Agregar profesor</strong>: Si no hay profesor asignado, usa <span class="button">"Agregar Profesor"</span></li>
+    </ul>
+
+    <h4>Aula</h4>
+    <p>Se filtran automáticamente según:</p>
+    <ul>
+        <li>Cantidad de estudiantes (capacidad suficiente)</li>
+        <li>Disponibilidad en el horario seleccionado</li>
+    </ul>
+
+    <div class="success-box">
+        <h3>Paso 3: Guardar</h3>
+        <ol>
+            <li>Verifica que todos los campos estén completos</li>
+            <li>Haz clic en <span class="button">"Crear Tarjeta"</span></li>
+            <li>El sistema validará la información y creará la tarjeta</li>
+        </ol>
+    </div>
+
+    <h2 id="gestionar">Gestionar Tarjetas Existentes</h2>
+
+    <h3>Ver Detalles</h3>
+    <ol>
+        <li>Haz clic en cualquier tarjeta del calendario</li>
+        <li>Se abrirá un modal con toda la información:
+            <ul>
+                <li>Fecha (formato dd/mm/aaaa)</li>
+                <li>Turno y horario</li>
+                <li>Materia y profesor</li>
+                <li>Aula y capacidad</li>
+                <li>Cantidad de estudiantes</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h3>Editar Tarjeta</h3>
+    <ol>
+        <li>En el modal de detalles, haz clic en <span class="button">"Editar"</span></li>
+        <li>Modifica los campos necesarios</li>
+        <li>Haz clic en <span class="button">"Actualizar Tarjeta"</span></li>
+    </ol>
+
+    <h2 id="duplicar">Duplicar Tarjetas</h2>
+
+    <div class="info-box">
+        <h3>Función de Duplicación</h3>
+        <p>La duplicación permite crear una copia exacta de una tarjeta para otra fecha, manteniendo todos los datos (turno, horario, materia, profesor, aula, cantidad de estudiantes).</p>
+    </div>
+
+    <div class="step-box">
+        <h3>Proceso de Duplicación</h3>
+        <ol>
+            <li><strong>Seleccionar tarjeta</strong>: Haz clic en la tarjeta que deseas duplicar</li>
+            <li><strong>Abrir duplicación</strong>: En el modal de detalles, haz clic en <span class="button">"Duplicar"</span></li>
+            <li><strong>Seleccionar fecha</strong>:
+                <ul>
+                    <li>Aparecerá un modal con un selector de fecha</li>
+                    <li>Solo puedes seleccionar fechas futuras</li>
+                    <li>La fecha mínima es el día actual</li>
+                </ul>
+            </li>
+            <li><strong>Confirmar</strong>: Haz clic en <span class="button">"Duplicar"</span></li>
+        </ol>
+    </div>
+
+    <h3>Validaciones Automáticas</h3>
+    <p>El sistema verificará automáticamente:</p>
+    <ul>
+        <li>✅ <strong>Disponibilidad de aula</strong>: El aula no debe estar ocupada en la nueva fecha/turno/horario</li>
+        <li>✅ <strong>Fecha válida</strong>: No se puede duplicar en fechas pasadas</li>
+    </ul>
+
+    <div class="warning-box">
+        <h3>Manejo de Conflictos</h3>
+        <p>Si el aula ya está ocupada, el sistema mostrará un mensaje específico:</p>
+        <blockquote>
+            "El aula [nombre] ya está ocupada el [fecha] en el turno [turno] horario [horario]. Para duplicar debe cambiar el turno, horario o seleccionar otro día."
+        </blockquote>
+        <p><strong>Opciones de solución:</strong></p>
+        <ul>
+            <li>Seleccionar otra fecha</li>
+            <li>Cambiar el turno en la tarjeta original antes de duplicar</li>
+            <li>Cambiar el horario en la tarjeta original antes de duplicar</li>
+        </ul>
+    </div>
+
+    <h2 id="eliminar">Eliminar Tarjetas</h2>
+
+    <div class="step-box">
+        <h3>Proceso de Eliminación</h3>
+        <ol>
+            <li><strong>Seleccionar tarjeta</strong>: Haz clic en la tarjeta que deseas eliminar</li>
+            <li><strong>Confirmar eliminación</strong>: En el modal de detalles, haz clic en <span class="button-danger">"Eliminar"</span></li>
+            <li><strong>Confirmación</strong>: Aparecerá un diálogo de confirmación</li>
+            <li><strong>Procesar</strong>: Haz clic en "Aceptar" para confirmar la eliminación</li>
+        </ol>
+    </div>
+
+    <div class="success-box">
+        <h3>Características</h3>
+        <ul>
+            <li>✅ <strong>Eliminación inmediata</strong>: Sin recarga de página</li>
+            <li>✅ <strong>Confirmación obligatoria</strong>: Previene eliminaciones accidentales</li>
+            <li>✅ <strong>Feedback inmediato</strong>: Mensaje de confirmación</li>
+        </ul>
+    </div>
+
+    <h2 id="profesores">Gestión de Profesores</h2>
+
+    <h3>Agregar Nuevo Profesor</h3>
+    <ol>
+        <li>En el formulario de tarjeta, haz clic en <span class="button">"Agregar Profesor"</span></li>
+        <li>Completa la información:
+            <ul>
+                <li>Nombre completo</li>
+                <li>Email (opcional)</li>
+                <li>Teléfono (opcional)</li>
+            </ul>
+        </li>
+        <li>Haz clic en <span class="button">"Guardar"</span></li>
+    </ol>
+
+    <h3>Cambiar Profesor de Materia</h3>
+    <ol>
+        <li>En el formulario de tarjeta, haz clic en <span class="button-secondary">"Cambiar Profesor"</span></li>
+        <li>Selecciona el nuevo profesor de la lista</li>
+        <li>El cambio se aplicará automáticamente a la materia</li>
+    </ol>
+
+    <h3>Eliminar Profesor</h3>
+    <ol>
+        <li>En la lista de profesores, haz clic en el ícono de eliminar (🗑️)</li>
+        <li>Confirma la eliminación</li>
+        <li><strong>Nota</strong>: Solo se pueden eliminar profesores no asignados a materias activas</li>
+    </ol>
+
+    <h2 id="validaciones">Validaciones y Restricciones</h2>
+
+    <div class="warning-box">
+        <h3>Política de Aulas</h3>
+        <p><strong>Regla fundamental</strong>: Una aula solo puede ser utilizada una vez por día/turno/horario específico.</p>
+    </div>
+
+    <h3>Validaciones Automáticas</h3>
+    <ol>
+        <li><strong>Capacidad de aula</strong>: Debe ser suficiente para la cantidad de estudiantes</li>
+        <li><strong>Disponibilidad de horario</strong>: El aula no debe estar ocupada</li>
+        <li><strong>Fechas válidas</strong>: No se permiten fechas pasadas para nuevas tarjetas</li>
+        <li><strong>Campos obligatorios</strong>: Todos los campos requeridos deben estar completos</li>
+    </ol>
+
+    <h3>Mensajes de Error</h3>
+    <p>El sistema proporciona mensajes específicos para cada tipo de error:</p>
+    <ul>
+        <li>Conflictos de aula</li>
+        <li>Capacidad insuficiente</li>
+        <li>Campos faltantes</li>
+        <li>Fechas inválidas</li>
+    </ul>
+
+    <h2 id="problemas">Solución de Problemas</h2>
+
+    <h3>Problemas Comunes</h3>
+
+    <div class="warning-box">
+        <h4>"No puedo duplicar una tarjeta"</h4>
+        <p><strong>Posibles causas:</strong></p>
+        <ul>
+            <li>El aula ya está ocupada en la fecha/turno/horario seleccionado</li>
+            <li>La fecha seleccionada es anterior al día actual</li>
+        </ul>
+        <p><strong>Solución:</strong></p>
+        <ul>
+            <li>Selecciona otra fecha</li>
+            <li>Cambia el turno o horario de la tarjeta original</li>
+            <li>Verifica que la fecha sea futura</li>
+        </ul>
+    </div>
+
+    <div class="warning-box">
+        <h4>"No aparecen aulas disponibles"</h4>
+        <p><strong>Posibles causas:</strong></p>
+        <ul>
+            <li>La cantidad de estudiantes excede la capacidad de las aulas</li>
+            <li>Todas las aulas están ocupadas en ese horario</li>
+        </ul>
+        <p><strong>Solución:</strong></p>
+        <ul>
+            <li>Reduce la cantidad de estudiantes</li>
+            <li>Selecciona otro horario o turno</li>
+            <li>Verifica la disponibilidad en otra fecha</li>
+        </ul>
+    </div>
+
+    <div class="warning-box">
+        <h4>"Los botones no funcionan"</h4>
+        <p><strong>Posibles causas:</strong></p>
+        <ul>
+            <li>Error de JavaScript en el navegador</li>
+            <li>Conexión de red interrumpida</li>
+        </ul>
+        <p><strong>Solución:</strong></p>
+        <ul>
+            <li>Recarga la página (F5)</li>
+            <li>Verifica tu conexión a internet</li>
+            <li>Limpia la caché del navegador</li>
+        </ul>
+    </div>
+
+    <div class="info-box">
+        <h3>Contacto de Soporte</h3>
+        <p>Para problemas técnicos o consultas adicionales, contacta al administrador del sistema.</p>
+    </div>
+
+    <h3>Consejos de Uso</h3>
+
+    <div class="success-box">
+        <h4>Mejores Prácticas</h4>
+        <ol>
+            <li><strong>Planificación anticipada</strong>: Crea las tarjetas con suficiente antelación</li>
+            <li><strong>Verificación de datos</strong>: Revisa siempre la información antes de guardar</li>
+            <li><strong>Uso de duplicación</strong>: Aprovecha la función de duplicación para materias recurrentes</li>
+            <li><strong>Gestión de profesores</strong>: Mantén actualizada la información de contacto</li>
+        </ol>
+    </div>
+
+    <div class="info-box">
+        <h4>Atajos Útiles</h4>
+        <ul>
+            <li><code>F5</code>: Recargar página</li>
+            <li><code>Esc</code>: Cerrar modales abiertos</li>
+            <li><code>Tab</code>: Navegar entre campos del formulario</li>
+        </ul>
+    </div>
+
+    <div class="footer">
+        <p><strong>Manual de Usuario - Sistema CUDI v1.0</strong></p>
+        <p>Última actualización: Agosto 2025</p>
+    </div>
+</body>
+</html>

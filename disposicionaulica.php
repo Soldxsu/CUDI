@@ -8,36 +8,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($_POST['action'] === 'create_tarjeta') {
             $fecha = $conn->real_escape_string($_POST['fecha']);
             $turno_id = intval($_POST['turno_id']);
-            $itinerario_id = intval($_POST['itinerario_id']);
+            $itinerario_id = isset($_POST['itinerario_id']) ? intval($_POST['itinerario_id']) : 0;
             $materia_id = intval($_POST['materia_id']);
             $aula_id = intval($_POST['aula_id']);
             $profesor_id = intval($_POST['profesor_id']);
             
-            // Verificar si el turno está lleno para esa fecha
-            // Obtener la capacidad total de todas las aulas activas
-            $sql_total_capacity = "SELECT SUM(capacidad) as capacidad_total FROM aulas WHERE estado = 'activa'";
-            $result_total = $conn->query($sql_total_capacity);
-            $total_capacity = $result_total->fetch_assoc()['capacidad_total'] ?? 0;
-            
-            // Obtener el número de estudiantes ya asignados en ese turno y fecha
-            $sql_estudiantes_asignados = "
-                SELECT SUM(t.cantidad_estudiantes) as estudiantes_asignados
-                FROM tarjetas_disposicion t
-                INNER JOIN itinerario i ON t.itinerario_id = i.id_itinerario
-                WHERE t.fecha = ? AND i.id_turno = ?
-            ";
-            
-            $stmt = $conn->prepare($sql_estudiantes_asignados);
-            $stmt->bind_param('si', $fecha, $turno_id);
-            $stmt->execute();
-            $result_estudiantes = $stmt->get_result();
-            $estudiantes_asignados = $result_estudiantes->fetch_assoc()['estudiantes_asignados'] ?? 0;
-            
-            // Verificar si se puede crear más tarjetas en este turno
-            if ($estudiantes_asignados >= $total_capacity) {
-                header('Location: disposicionaulica.php?error=Turno lleno para esta fecha. Capacidad total: ' . $total_capacity . ', Estudiantes asignados: ' . $estudiantes_asignados);
+            // Validar que se haya seleccionado un itinerario
+            if ($itinerario_id == 0) {
+                header('Location: disposicionaulica.php?error=Debe seleccionar un horario válido');
                 exit;
             }
+            
             
             $cantidad_estudiantes = intval($_POST['cantidad_estudiantes']);
             
@@ -45,9 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     VALUES ('$fecha', $turno_id, $itinerario_id, $materia_id, $aula_id, $profesor_id, $cantidad_estudiantes, 'activa')";
             
             if ($conn->query($sql)) {
-                // Calcular capacidad restante después de crear la tarjeta
-                $nueva_capacidad_disponible = $total_capacity - ($estudiantes_asignados + $cantidad_estudiantes);
-                header('Location: disposicionaulica.php?success=1&capacidad_restante=' . $nueva_capacidad_disponible);
+                header('Location: disposicionaulica.php?success=1');
                 exit;
             }
         } elseif ($_POST['action'] === 'delete_tarjeta' && isset($_POST['id_tarjeta'])) {
@@ -56,44 +35,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: disposicionaulica.php?deleted=1');
             exit;
         } elseif ($_POST['action'] === 'duplicate_tarjeta' && isset($_POST['id_tarjeta'])) {
+            error_log("=== INICIO DUPLICACIÓN ===");
+            error_log("POST data: " . print_r($_POST, true));
+            
             $id = intval($_POST['id_tarjeta']);
             $nueva_fecha = $conn->real_escape_string($_POST['nueva_fecha']);
             
+            error_log("ID tarjeta: $id");
+            error_log("Nueva fecha: $nueva_fecha");
+            
             // Obtener datos de la tarjeta original
-            $original = $conn->query("SELECT * FROM tarjetas_disposicion WHERE id_tarjeta = $id")->fetch_assoc();
+            $query_original = "SELECT * FROM tarjetas_disposicion WHERE id_tarjeta = $id";
+            error_log("Query original: $query_original");
             
-            // Verificar si el turno está lleno para la nueva fecha
-            // Obtener la capacidad total de todas las aulas activas
-            $sql_total_capacity = "SELECT SUM(capacidad) as capacidad_total FROM aulas WHERE estado = 'activa'";
-            $result_total = $conn->query($sql_total_capacity);
-            $total_capacity = $result_total->fetch_assoc()['capacidad_total'] ?? 0;
-            
-            // Obtener el número de estudiantes ya asignados en ese turno y fecha
-            $sql_estudiantes_asignados = "
-                SELECT SUM(t.cantidad_estudiantes) as estudiantes_asignados
-                FROM tarjetas_disposicion t
-                INNER JOIN itinerario i ON t.itinerario_id = i.id_itinerario
-                WHERE t.fecha = ? AND i.id_turno = ?
-            ";
-            
-            $stmt = $conn->prepare($sql_estudiantes_asignados);
-            $stmt->bind_param('si', $nueva_fecha, $original['turno_id']);
-            $stmt->execute();
-            $result_estudiantes = $stmt->get_result();
-            $estudiantes_asignados = $result_estudiantes->fetch_assoc()['estudiantes_asignados'] ?? 0;
-            
-            // Verificar si se puede crear más tarjetas en este turno
-            if ($estudiantes_asignados >= $total_capacity) {
-                header('Location: disposicionaulica.php?error=Turno lleno para la fecha seleccionada. Capacidad total: ' . $total_capacity . ', Estudiantes asignados: ' . $estudiantes_asignados);
+            $result = $conn->query($query_original);
+            if (!$result) {
+                error_log("Error en query original: " . $conn->error);
+                header('Location: disposicionaulica.php?error=query_original');
                 exit;
             }
             
-            // Crear nueva tarjeta con la nueva fecha
+            $original = $result->fetch_assoc();
+            if (!$original) {
+                error_log("No se encontró tarjeta original con ID: $id");
+                header('Location: disposicionaulica.php?error=tarjeta_no_encontrada');
+                exit;
+            }
+            
+            error_log("Datos originales: " . print_r($original, true));
+            
+            // VALIDACIÓN DE CONFLICTOS: Verificar si el aula ya está ocupada en la nueva fecha/turno/horario
+            $query_conflicto = "SELECT td.*, a.nombre as aula_nombre 
+                               FROM tarjetas_disposicion td 
+                               JOIN aulas a ON td.aula_id = a.id_aula 
+                               WHERE td.fecha = '$nueva_fecha' 
+                               AND td.turno_id = {$original['turno_id']} 
+                               AND td.itinerario_id = {$original['itinerario_id']} 
+                               AND td.aula_id = {$original['aula_id']}";
+            
+            error_log("Query conflicto: $query_conflicto");
+            
+            $conflicto_result = $conn->query($query_conflicto);
+            if ($conflicto_result && $conflicto_result->num_rows > 0) {
+                $conflicto = $conflicto_result->fetch_assoc();
+                error_log("Conflicto detectado: " . print_r($conflicto, true));
+                
+                // Obtener nombres para el mensaje de error
+                $query_nombres = "SELECT t.nombre as turno_nombre, i.nombre as horario_nombre 
+                                 FROM turnos t, itinerario i 
+                                 WHERE t.id_turno = {$original['turno_id']} 
+                                 AND i.id_itinerario = {$original['itinerario_id']}";
+                $nombres_result = $conn->query($query_nombres);
+                $nombres = $nombres_result->fetch_assoc();
+                
+                $mensaje_error = urlencode("El aula {$conflicto['aula_nombre']} ya está ocupada el $nueva_fecha en el turno {$nombres['turno_nombre']} horario {$nombres['horario_nombre']}. Para duplicar debe cambiar el turno, horario o seleccionar otro día.");
+                header("Location: disposicionaulica.php?error=conflicto_aula&mensaje=$mensaje_error");
+                exit;
+            }
+            
+            // Si no hay conflictos, proceder con la duplicación
             $sql = "INSERT INTO tarjetas_disposicion (fecha, turno_id, itinerario_id, materia_id, aula_id, profesor_id, cantidad_estudiantes, estado) 
                     VALUES ('$nueva_fecha', {$original['turno_id']}, {$original['itinerario_id']}, {$original['materia_id']}, {$original['aula_id']}, {$original['profesor_id']}, {$original['cantidad_estudiantes']}, 'duplicada')";
             
+            error_log("Query inserción: $sql");
+            
             if ($conn->query($sql)) {
+                error_log("Duplicación exitosa. Nuevo ID: " . $conn->insert_id);
                 header('Location: disposicionaulica.php?duplicated=1');
+                exit;
+            } else {
+                error_log("Error en inserción: " . $conn->error);
+                header('Location: disposicionaulica.php?error=insercion');
                 exit;
             }
         } elseif ($_POST['action'] === 'update_tarjeta' && isset($_POST['id_tarjeta'])) {
@@ -106,30 +118,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $profesor_id = intval($_POST['profesor_id']);
             $cantidad_estudiantes = intval($_POST['cantidad_estudiantes']);
             
-            // Verificar si el turno está lleno para esa fecha (excluyendo la tarjeta actual)
-            $sql_total_capacity = "SELECT SUM(capacidad) as capacidad_total FROM aulas WHERE estado = 'activa'";
-            $result_total = $conn->query($sql_total_capacity);
-            $total_capacity = $result_total->fetch_assoc()['capacidad_total'] ?? 0;
-            
-            // Obtener el número de estudiantes ya asignados en ese turno y fecha (excluyendo la tarjeta actual)
-            $sql_estudiantes_asignados = "
-                SELECT SUM(t.cantidad_estudiantes) as estudiantes_asignados
-                FROM tarjetas_disposicion t
-                INNER JOIN itinerario i ON t.itinerario_id = i.id_itinerario
-                WHERE t.fecha = ? AND i.id_turno = ? AND t.id_tarjeta != ?
-            ";
-            
-            $stmt = $conn->prepare($sql_estudiantes_asignados);
-            $stmt->bind_param('sii', $fecha, $turno_id, $id_tarjeta);
-            $stmt->execute();
-            $result_estudiantes = $stmt->get_result();
-            $estudiantes_asignados = $result_estudiantes->fetch_assoc()['estudiantes_asignados'] ?? 0;
-            
-            // Verificar si se puede actualizar la tarjeta
-            if (($estudiantes_asignados + $cantidad_estudiantes) > $total_capacity) {
-                header('Location: disposicionaulica.php?error=Turno lleno para esta fecha. Capacidad total: ' . $total_capacity . ', Estudiantes asignados: ' . ($estudiantes_asignados + $cantidad_estudiantes));
-                exit;
-            }
             
             // Actualizar la tarjeta
             $sql = "UPDATE tarjetas_disposicion SET 
@@ -1035,7 +1023,11 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
     <?php endif; ?>
 
     <?php if (isset($_GET['error'])): ?>
-        <div class="error-message"><?php echo htmlspecialchars($_GET['error']); ?></div>
+        <?php if ($_GET['error'] === 'conflicto_aula' && isset($_GET['mensaje'])): ?>
+            <div class="error-message"><?php echo htmlspecialchars(urldecode($_GET['mensaje'])); ?></div>
+        <?php else: ?>
+            <div class="error-message"><?php echo htmlspecialchars($_GET['error']); ?></div>
+        <?php endif; ?>
     <?php endif; ?>
 
     <div class="controls">
@@ -1102,10 +1094,11 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
                     
                     <!-- Información de capacidad del día -->
                     <?php if (!$es_otro_mes): ?>
-                        <div class="day-capacity-info" id="capacity-<?php echo $fecha_str; ?>">
-                            <!-- Se llenará dinámicamente con JavaScript -->
-                        </div>
-                        
+                        <?php if ($fecha_str !== '2025-08-12'): ?>
+                            <div class="day-capacity-info" id="capacity-<?php echo $fecha_str; ?>" style="display:none;">
+                                <!-- Se llenará dinámicamente con JavaScript -->
+                            </div>
+                        <?php endif; ?>
                         <!-- Botón para crear tarjeta en este día específico - SIEMPRE visible -->
                         <div class="add-tarjeta-day" onclick="event.stopPropagation(); openModalForDate('<?php echo $fecha_str; ?>')">
                             <button class="btn-add-day" title="Crear tarjeta para este día">
@@ -1132,13 +1125,19 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
                 <input type="hidden" name="action" value="create_tarjeta">
                 
                 <div class="form-group">
+                    <label>Cantidad de Estudiantes:</label>
+                    <input type="number" name="cantidad_estudiantes" id="cantidad_estudiantes" min="1" required 
+                           placeholder="Ingrese la cantidad de estudiantes" onchange="habilitarCampos()">
+                </div>
+                
+                <div class="form-group">
                     <label>Fecha:</label>
-                    <input type="date" name="fecha" required>
+                    <input type="date" name="fecha" required disabled id="fecha_field">
                 </div>
                 
                 <div class="form-group">
                     <label>Turno:</label>
-                    <select name="turno_id" required>
+                    <select name="turno_id" required disabled id="turno_field" onchange="filtrarItinerarios(this.value)">
                         <option value="">Seleccionar turno</option>
                         <?php $turnos->data_seek(0); while ($turno = $turnos->fetch_assoc()): ?>
                             <option value="<?php echo $turno['id_turno']; ?>">
@@ -1256,37 +1255,10 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
                 
                 <div class="form-group">
                     <label>Aula:</label>
-                    <select name="aula_id" required>
-                        <option value="">Seleccionar aula</option>
-                        <?php $aulas->data_seek(0); while ($aula = $aulas->fetch_assoc()): ?>
-                            <option value="<?php echo $aula['id_aula']; ?>">
-                                <?php echo $aula['nombre']; ?> (Cap: <?php echo $aula['capacidad']; ?>)
-                            </option>
-                        <?php endwhile; ?>
+                    <select name="aula_id" required disabled id="aula_field">
+                        <option value="">Primero ingrese cantidad de estudiantes</option>
                     </select>
                 </div>
-
-                <div class="form-group">
-                    <label>Cantidad de Estudiantes:</label>
-                    <input type="number" name="cantidad_estudiantes" min="1" required>
-                </div>
-
-                <!-- Información de capacidad del turno -->
-                <div id="info_capacidad_turno" class="form-group" style="display: none;">
-                    <div class="info-box">
-                        <strong>Información del Turno:</strong>
-                        <div id="capacidad_info">
-                            <span>Capacidad total del turno: <span id="capacidad_total">0</span> estudiantes</span><br>
-                            <span>Estudiantes ya asignados: <span id="estudiantes_asignados">0</span></span><br>
-                            <span>Capacidad disponible: <span id="capacidad_disponible">0</span> estudiantes</span>
-                        </div>
-                        <div style="margin-top: 10px; font-size: 14px; color: #666;">
-                            <em>💡 Puedes crear múltiples tarjetas en el mismo turno hasta que se alcance la capacidad total.</em>
-                        </div>
-                    </div>
-                </div>
-                
-
                 
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
@@ -1540,7 +1512,7 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             
             detalles.innerHTML = `
                 <div style="margin-bottom: 15px;">
-                    <strong>Fecha:</strong> ${new Date(tarjeta.fecha).toLocaleDateString('es-ES')}
+                    <strong>Fecha:</strong> ${tarjeta.fecha.split('-').reverse().join('/')}
                 </div>
                 <div style="margin-bottom: 15px;">
                     <strong>Turno:</strong> ${tarjeta.turno_nombre} (${tarjeta.hora_inicio} - ${tarjeta.hora_fin})
@@ -1595,21 +1567,109 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
         }
 
         function duplicarTarjeta() {
-            if (!tarjetaActual) return;
+            console.log('Función duplicarTarjeta llamada');
+            console.log('tarjetaActual:', tarjetaActual);
             
-            const nuevaFecha = prompt('Ingrese la nueva fecha (YYYY-MM-DD):', tarjetaActual.fecha);
-            if (nuevaFecha) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = window.location.href;
-                form.innerHTML = `
-                    <input type="hidden" name="action" value="duplicate_tarjeta">
-                    <input type="hidden" name="id_tarjeta" value="${tarjetaActual.id_tarjeta}">
-                    <input type="hidden" name="nueva_fecha" value="${nuevaFecha}">
-                `;
-                document.body.appendChild(form);
-                form.submit();
+            if (!tarjetaActual) {
+                alert('Error: No hay tarjeta seleccionada para duplicar');
+                return;
             }
+            
+            // Crear un input date en lugar de usar prompt()
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background: rgba(0,0,0,0.5); display: flex; align-items: center; 
+                justify-content: center; z-index: 10000;
+            `;
+            
+            modal.innerHTML = `
+                <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <h3>Duplicar Tarjeta</h3>
+                    <p>Seleccione la nueva fecha:</p>
+                    <input type="date" id="nuevaFechaDuplicar" value="${tarjetaActual.fecha}" min="${new Date().toISOString().split('T')[0]}" style="width: 100%; padding: 8px; margin: 10px 0;">
+                    <div style="text-align: right; margin-top: 15px;">
+                        <button onclick="cancelarDuplicacion()" style="margin-right: 10px; padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancelar</button>
+                        <button onclick="confirmarDuplicacion()" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Duplicar</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            document.getElementById('nuevaFechaDuplicar').focus();
+        }
+        
+        function cancelarDuplicacion() {
+            const modal = document.querySelector('div[style*="z-index: 10000"]');
+            if (modal) modal.remove();
+        }
+        
+        function confirmarDuplicacion() {
+            const nuevaFecha = document.getElementById('nuevaFechaDuplicar').value;
+            console.log('Nueva fecha seleccionada:', nuevaFecha);
+            
+            if (!nuevaFecha) {
+                alert('Debe seleccionar una fecha');
+                return;
+            }
+            
+            // Validar que la fecha no sea anterior a hoy
+            const fechaIngresada = new Date(nuevaFecha);
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+            
+            if (fechaIngresada < hoy) {
+                alert('La fecha no puede ser anterior a hoy');
+                return;
+            }
+            
+            console.log('Enviando duplicación por AJAX...');
+            
+            // Cerrar modal de duplicación
+            cancelarDuplicacion();
+            
+            // Enviar por AJAX
+            const formData = new FormData();
+            formData.append('action', 'duplicate_tarjeta');
+            formData.append('id_tarjeta', tarjetaActual.id_tarjeta);
+            formData.append('nueva_fecha', nuevaFecha);
+            
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                console.log('Respuesta del servidor:', data);
+                
+                // Verificar si hay error en la respuesta
+                if (data.includes('error=conflicto_aula')) {
+                    const urlParams = new URLSearchParams(data.split('?')[1]);
+                    const mensaje = urlParams.get('mensaje');
+                    if (mensaje) {
+                        alert(decodeURIComponent(mensaje));
+                    } else {
+                        alert('Error: Conflicto de aula detectado');
+                    }
+                } else if (data.includes('duplicated=1')) {
+                    alert('Tarjeta duplicada exitosamente');
+                    // Recargar solo el calendario
+                    location.reload();
+                } else if (data.includes('error=')) {
+                    alert('Error al duplicar la tarjeta');
+                } else {
+                    // Si no hay redirección, significa que fue exitoso
+                    alert('Tarjeta duplicada exitosamente');
+                    location.reload();
+                }
+                
+                // Cerrar modal de detalles
+                closeDetallesModal();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al procesar la solicitud');
+            });
         }
 
         function editarTarjeta() {
@@ -1633,18 +1693,49 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
         }
 
         function eliminarTarjeta() {
-            if (!tarjetaActual) return;
+            console.log('Función eliminarTarjeta llamada');
+            console.log('tarjetaActual:', tarjetaActual);
+            
+            if (!tarjetaActual) {
+                alert('Error: No hay tarjeta seleccionada para eliminar');
+                return;
+            }
             
             if (confirm('¿Está seguro de que desea eliminar esta tarjeta?')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = window.location.href;
-                form.innerHTML = `
-                    <input type="hidden" name="action" value="delete_tarjeta">
-                    <input type="hidden" name="id_tarjeta" value="${tarjetaActual.id_tarjeta}">
-                `;
-                document.body.appendChild(form);
-                form.submit();
+                console.log('Enviando eliminación por AJAX...');
+                
+                // Enviar por AJAX
+                const formData = new FormData();
+                formData.append('action', 'delete_tarjeta');
+                formData.append('id_tarjeta', tarjetaActual.id_tarjeta);
+                
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(data => {
+                    console.log('Respuesta del servidor:', data);
+                    
+                    if (data.includes('deleted=1')) {
+                        alert('Tarjeta eliminada exitosamente');
+                        // Recargar solo el calendario
+                        location.reload();
+                    } else if (data.includes('error=')) {
+                        alert('Error al eliminar la tarjeta');
+                    } else {
+                        // Si no hay redirección, significa que fue exitoso
+                        alert('Tarjeta eliminada exitosamente');
+                        location.reload();
+                    }
+                    
+                    // Cerrar modal de detalles
+                    closeDetallesModal();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al procesar la solicitud');
+                });
             }
         }
 
@@ -2000,23 +2091,38 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             const buscarMateria = document.getElementById('buscar_materia');
             const buscarProfesor = document.getElementById('buscar_profesor');
             
-            turnoSelect.addEventListener('change', function() {
-                filtrarItinerariosPorTurno(this.value);
-            });
+            // Verificar que los elementos existen antes de agregar event listeners
+            if (turnoSelect) {
+                turnoSelect.addEventListener('change', function() {
+                    filtrarItinerariosPorTurno(this.value);
+                });
+            }
             
-            itinerarioSelect.addEventListener('change', verificarDisponibilidadAula);
-            aulaSelect.addEventListener('change', verificarDisponibilidadAula);
-            fechaInput.addEventListener('change', verificarDisponibilidadAula);
+            if (itinerarioSelect) {
+                itinerarioSelect.addEventListener('change', verificarDisponibilidadAula);
+            }
+            
+            if (aulaSelect) {
+                aulaSelect.addEventListener('change', verificarDisponibilidadAula);
+            }
+            
+            if (fechaInput) {
+                fechaInput.addEventListener('change', verificarDisponibilidadAula);
+            }
             
             // Búsqueda de materias
-            buscarMateria.addEventListener('input', function() {
-                filtrarMaterias(this.value);
-            });
+            if (buscarMateria) {
+                buscarMateria.addEventListener('input', function() {
+                    filtrarMaterias(this.value);
+                });
+            }
             
             // Búsqueda de profesores
-            buscarProfesor.addEventListener('input', function() {
-                filtrarProfesores(this.value);
-            });
+            if (buscarProfesor) {
+                buscarProfesor.addEventListener('input', function() {
+                    filtrarProfesores(this.value);
+                });
+            }
             
             // Event listeners para las opciones de materia
             document.querySelectorAll('#materia_options .custom-select-option').forEach(option => {
@@ -2053,35 +2159,52 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             cargarCapacidadDias();
 
             // Event listener para calcular capacidad del turno
-            turnoSelect.addEventListener('change', function() {
-                calcularCapacidadTurno();
-            });
-            
-            fechaInput.addEventListener('change', function() {
-                if (turnoSelect.value) {
+            if (turnoSelect) {
+                turnoSelect.addEventListener('change', function() {
                     calcularCapacidadTurno();
-                }
-            });
+                });
+            }
+            
+            if (fechaInput) {
+                fechaInput.addEventListener('change', function() {
+                    if (turnoSelect && turnoSelect.value) {
+                        calcularCapacidadTurno();
+                    }
+                });
+            }
 
             // Event listener para el turno en el modal de edición
-            document.getElementById('edit_turno_id').addEventListener('change', function() {
-                filtrarItinerariosEdicion(this.value);
-            });
+            const editTurnoId = document.getElementById('edit_turno_id');
+            if (editTurnoId) {
+                editTurnoId.addEventListener('change', function() {
+                    filtrarItinerariosEdicion(this.value);
+                });
+            }
             
             // Event listener para el formulario de creación de tarjetas
-            document.querySelector('form[action=""]').addEventListener('submit', function(e) {
-                const cantidadEstudiantes = parseInt(document.querySelector('input[name="cantidad_estudiantes"]').value);
-                const capacidadDisponible = parseInt(document.getElementById('capacidad_disponible').textContent);
-                
-                if (cantidadEstudiantes > capacidadDisponible) {
-                    e.preventDefault();
-                    alert(`No se puede crear la tarjeta. La cantidad de estudiantes (${cantidadEstudiantes}) excede la capacidad disponible (${capacidadDisponible}) en este turno.`);
-                    return false;
-                }
-            });
+            const formCreacion = document.querySelector('form[action=""]');
+            if (formCreacion) {
+                formCreacion.addEventListener('submit', function(e) {
+                    const cantidadEstudiantesInput = document.querySelector('input[name="cantidad_estudiantes"]');
+                    const capacidadDisponibleEl = document.getElementById('capacidad_disponible');
+                    
+                    if (cantidadEstudiantesInput && capacidadDisponibleEl) {
+                        const cantidadEstudiantes = parseInt(cantidadEstudiantesInput.value);
+                        const capacidadDisponible = parseInt(capacidadDisponibleEl.textContent);
+                        
+                        if (cantidadEstudiantes > capacidadDisponible) {
+                            e.preventDefault();
+                            alert(`No se puede crear la tarjeta. La cantidad de estudiantes (${cantidadEstudiantes}) excede la capacidad disponible (${capacidadDisponible}) en este turno.`);
+                            return false;
+                        }
+                    }
+                });
+            }
 
             // Event listener para la cantidad de estudiantes
-            document.querySelector('input[name="cantidad_estudiantes"]').addEventListener('input', function() {
+            const cantidadEstudiantesInput = document.querySelector('input[name="cantidad_estudiantes"]');
+            if (cantidadEstudiantesInput) {
+                cantidadEstudiantesInput.addEventListener('input', function() {
                 if (this.value && document.getElementById('info_capacidad_turno').style.display !== 'none') {
                     const cantidadEstudiantes = parseInt(this.value) || 0;
                     const capacidadDisponible = parseInt(document.getElementById('capacidad_disponible').textContent);
@@ -2094,10 +2217,13 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
                         this.title = '';
                     }
                 }
-            });
+                });
+            }
 
             // Event listener para el formulario de profesores
-            document.getElementById('formProfesor').addEventListener('submit', function(e) {
+            const formProfesor = document.getElementById('formProfesor');
+            if (formProfesor) {
+                formProfesor.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
                 const formData = new FormData(this);
@@ -2122,7 +2248,8 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
                     console.error('Error:', error);
                     alert('Error al procesar la solicitud');
                 });
-            });
+                });
+            }
         });
 
         // Función para calcular la capacidad del turno
@@ -2213,6 +2340,63 @@ $dias_semana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
             .catch(error => {
                 console.error('Error al cargar capacidad del día:', error);
             });
+        }
+
+        // Función para habilitar campos después de ingresar cantidad de estudiantes
+        function habilitarCampos() {
+            const cantidadEstudiantes = document.getElementById('cantidad_estudiantes').value;
+            
+            if (cantidadEstudiantes && cantidadEstudiantes > 0) {
+                // Habilitar campos
+                document.getElementById('fecha_field').disabled = false;
+                document.getElementById('turno_field').disabled = false;
+                
+                // Filtrar y cargar aulas según capacidad
+                cargarAulasPorCapacidad(cantidadEstudiantes);
+            } else {
+                // Deshabilitar campos
+                document.getElementById('fecha_field').disabled = true;
+                document.getElementById('turno_field').disabled = true;
+                document.getElementById('itinerario_select').disabled = true;
+                document.getElementById('aula_field').disabled = true;
+                
+                // Limpiar selecciones
+                document.getElementById('turno_field').value = '';
+                document.getElementById('itinerario_select').innerHTML = '<option value="">Primero selecciona un turno</option>';
+                document.getElementById('aula_field').innerHTML = '<option value="">Primero ingrese cantidad de estudiantes</option>';
+            }
+        }
+        
+        // Función para cargar aulas que pueden albergar la cantidad de estudiantes
+        function cargarAulasPorCapacidad(cantidadEstudiantes) {
+            const aulaSelect = document.getElementById('aula_field');
+            aulaSelect.innerHTML = '<option value="">Seleccionar aula</option>';
+            
+            // Datos de aulas desde PHP
+            const aulasData = <?php 
+                $aulas_array = [];
+                $aulas->data_seek(0);
+                while ($aula = $aulas->fetch_assoc()) {
+                    $aulas_array[] = $aula;
+                }
+                echo json_encode($aulas_array);
+            ?>;
+            
+            // Filtrar aulas que pueden albergar la cantidad de estudiantes
+            const aulasFiltradas = aulasData.filter(aula => parseInt(aula.cantidad) >= parseInt(cantidadEstudiantes));
+            
+            if (aulasFiltradas.length > 0) {
+                aulasFiltradas.forEach(aula => {
+                    const option = document.createElement('option');
+                    option.value = aula.id_aula;
+                    option.textContent = `${aula.numero} (Cap: ${aula.cantidad})`;
+                    aulaSelect.appendChild(option);
+                });
+                aulaSelect.disabled = false;
+            } else {
+                aulaSelect.innerHTML = '<option value="">No hay aulas disponibles para esta cantidad</option>';
+                aulaSelect.disabled = true;
+            }
         }
 
         // Cerrar modales al hacer clic fuera
