@@ -1,0 +1,134 @@
+DOCUMENTACIÓN TÉCNICA: DISPOSICION_AULICA.PHP
+
+1. ESTRUCTURA GENERAL
+-------------------
+El archivo `disposicion_aulica.php` es el componente principal del sistema de gestión de disposición áulica. Maneja la visualización del calendario, la interacción del usuario y la gestión de las tarjetas de disposición.
+
+2. COMPONENTES PRINCIPALES
+------------------------
+
+2.1. ESTRUCTURA DEL ARCHIVO
+- Inclusión de archivos necesarios (conexión a BD, configuraciones)
+- Manejo de sesiones y permisos
+- Procesamiento de acciones (GET/POST)
+- Estructura HTML principal
+- Scripts JavaScript
+
+2.2. BASE DE DATOS
+- Tabla principal: `tarjetas_disposicion`
+- Tablas relacionadas: `aulas`, `turnos`, `materias`, `profesores`, `itinerarios`
+
+3. FUNCIONALIDADES IMPLEMENTADAS
+-----------------------------
+
+3.1. CALENDARIO
+--------------
+- Visualización por semana/mes
+- Navegación entre semanas/meses
+- Resaltado del día actual
+- Indicadores visuales para días con actividades
+
+3.2. GESTIÓN DE TARJETAS
+----------------------
+- Creación de nuevas tarjetas
+- Edición de tarjetas existentes
+- Eliminación de tarjetas
+- Duplicación de tarjetas
+- Validación de disponibilidad
+
+4. INTERFAZ DE USUARIO
+--------------------
+
+4.1. ELEMENTOS PRINCIPALES
+- Barra de navegación con selector de fecha
+- Vista de calendario semanal/mensual
+- Modal para crear/editar tarjetas
+- Tarjetas de disposición visuales
+
+4.2. MODALES
+-----------
+- Modal de creación/edición de tarjetas
+- Modal de confirmación de eliminación
+- Modal de detalles de tarjeta
+- Modal de gestión de profesores
+
+5. JAVASCRIPT
+------------
+
+5.1. FUNCIONES PRINCIPALES
+- `cargarCalendario(fecha)`: Carga el calendario para la fecha especificada
+- `mostrarModalCrear(fecha, turnoId)`: Muestra el modal para crear una tarjeta
+- `guardarTarjeta()`: Maneja el envío del formulario de tarjeta
+- `eliminarTarjeta(id)`: Elimina una tarjeta existente
+- `duplicarTarjeta(id)`: Duplica una tarjeta existente
+
+5.2. MANEJO DE EVENTOS
+- Clic en celdas del calendario
+- Envío de formularios
+- Cierre de modales
+- Navegación del calendario
+
+5.3. VALIDACIONES
+- Validación de campos requeridos
+- Verificación de disponibilidad de aula
+- Validación de horarios
+- Comprobación de conflictos
+
+6. LIBRERÍAS UTILIZADAS
+---------------------
+- jQuery: Para manipulación del DOM y AJAX
+- FullCalendar: Para la visualización del calendario
+- Bootstrap: Para estilos y componentes UI
+- SweetAlert2: Para alertas y confirmaciones
+- Moment.js: Para manejo de fechas y horas
+
+7. FLUJO DE DATOS
+---------------
+1. El usuario interactúa con la interfaz (ej: hace clic en un día)
+2. Se dispara un evento JavaScript
+3. Se realizan peticiones AJAX según sea necesario
+4. El servidor procesa la solicitud y devuelve una respuesta
+5. La interfaz se actualiza dinámicamente
+
+8. CONSIDERACIONES DE RENDIMIENTO
+-------------------------------
+- Se utiliza carga perezosa para los datos del calendario
+- Las consultas a la base de datos están optimizadas
+- Se implementa caché de datos cuando es posible
+- Las peticiones AJAX son asíncronas para no bloquear la interfaz
+
+9. SEGURIDAD
+-----------
+- Validación de entrada en el servidor
+- Protección contra inyección SQL
+- Control de acceso basado en roles
+- Protección CSRF
+- Sanitización de salida
+
+10. ESTRUCTURA DE ARCHIVOS RELACIONADOS
+------------------------------------
+- `conexion.php`: Manejo de la conexión a la base de datos
+- `save_item.php`: Procesamiento de guardado de tarjetas
+- `delete_item.php`: Manejo de eliminación de tarjetas
+- `get_item_data.php`: Obtención de datos de tarjetas
+- `css/disposicion.css`: Estilos específicos
+- `js/disposicion.js`: Funcionalidad JavaScript (si se externalizó)
+
+11. MEJORAS FUTURAS
+-----------------
+- Implementar arrastrar y soltar para las tarjetas
+- Añadir vista de día
+- Mejorar la respuesta móvil
+- Añadir búsqueda y filtrado avanzado
+- Implementar notificaciones en tiempo real
+
+12. NOTAS DE IMPLEMENTACIÓN
+-------------------------
+- El código sigue el patrón MVC (Modelo-Vista-Controlador)
+- Se utiliza programación orientada a objetos
+- Los nombres de variables y funciones siguen las convenciones de PHP
+- El código está documentado con comentarios
+
+Este documento fue generado el 25/08/2025.
+
+--- FIN DE LA DOCUMENTACIÓN ---

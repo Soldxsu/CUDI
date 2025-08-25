@@ -1044,16 +1044,64 @@ $fecha_formateada = $fecha_obj->format('d/m/Y');
                     $aula_nombre = $aula['numero'];
                     $capacidad = $aula['cantidad'];
                     $turnos_aula = isset($tarjetas_por_aula[$aula_id]['turnos']) ? $tarjetas_por_aula[$aula_id]['turnos'] : [];
-                    list($txt_manana, $color_manana) = $turno_manana ? estadoTurno($turno_manana, $turnos_aula, $capacidad) : ['-', '#888'];
-                    list($txt_tarde, $color_tarde) = $turno_tarde ? estadoTurno($turno_tarde, $turnos_aula, $capacidad) : ['-', '#888'];
-                    list($txt_noche, $color_noche) = $turno_noche ? estadoTurno($turno_noche, $turnos_aula, $capacidad) : ['-', '#888'];
+                    list($txt_manana, $color_manana) = $turno_manana ? estadoTurno($turno_manana, $turnos_aula, $capacidad) : ['Sin uso', '#888'];
+                    list($txt_tarde, $color_tarde) = $turno_tarde ? estadoTurno($turno_tarde, $turnos_aula, $capacidad) : ['Sin uso', '#888'];
+                    list($txt_noche, $color_noche) = $turno_noche ? estadoTurno($turno_noche, $turnos_aula, $capacidad) : ['Sin uso', '#888'];
                 ?>
                     <tr class="fila-aula" style="cursor:pointer;" onclick="mostrarModalAula('<?php echo $aula_id; ?>')">
                         <td><strong><?php echo $aula_nombre; ?></strong></td>
                         <td><?php echo $capacidad; ?></td>
-                        <td><span style="font-weight:600;color:<?php echo $color_manana; ?>;"><?php echo $txt_manana; ?></span></td>
-                        <td><span style="font-weight:600;color:<?php echo $color_tarde; ?>;"><?php echo $txt_tarde; ?></span></td>
-                        <td><span style="font-weight:600;color:<?php echo $color_noche; ?>;"><?php echo $txt_noche; ?></span></td>
+                        <td style="padding: 5px; vertical-align: top;" class="turno-cell" data-turno="manana">
+                            <?php if ($turno_manana && isset($turnos_aula[$turno_manana]['tarjetas'])): ?>
+                                <?php foreach ($turnos_aula[$turno_manana]['tarjetas'] as $tarjeta): ?>
+                                    <div class="mini-tarjeta" style="background: #f8f9fa; border-left: 3px solid #28a745; padding: 5px; margin: 2px 0; border-radius: 3px; font-size: 0.85em;">
+                                        <div style="font-weight: 600;"><?php echo htmlspecialchars($tarjeta['materia_nombre']); ?></div>
+                                        <div style="font-size: 0.8em; color: #666;">
+                                            <?php echo htmlspecialchars($tarjeta['itinerario_nombre']); ?>
+                                            <?php if (!empty($tarjeta['profesor_nombre'])): ?>
+                                                <br>Prof: <?php echo htmlspecialchars($tarjeta['profesor_nombre']); ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <span style="font-weight:600;color:<?php echo $color_manana; ?>;"><?php echo $txt_manana; ?></span>
+                            <?php endif; ?>
+                        </td>
+                        <td style="padding: 5px; vertical-align: top;" class="turno-cell" data-turno="tarde">
+                            <?php if ($turno_tarde && isset($turnos_aula[$turno_tarde]['tarjetas'])): ?>
+                                <?php foreach ($turnos_aula[$turno_tarde]['tarjetas'] as $tarjeta): ?>
+                                    <div class="mini-tarjeta" style="background: #f8f9fa; border-left: 3px solid #28a745; padding: 5px; margin: 2px 0; border-radius: 3px; font-size: 0.85em;">
+                                        <div style="font-weight: 600;"><?php echo htmlspecialchars($tarjeta['materia_nombre']); ?></div>
+                                        <div style="font-size: 0.8em; color: #666;">
+                                            <?php echo htmlspecialchars($tarjeta['itinerario_nombre']); ?>
+                                            <?php if (!empty($tarjeta['profesor_nombre'])): ?>
+                                                <br>Prof: <?php echo htmlspecialchars($tarjeta['profesor_nombre']); ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <span style="font-weight:600;color:<?php echo $color_tarde; ?>;"><?php echo $txt_tarde; ?></span>
+                            <?php endif; ?>
+                        </td>
+                        <td style="padding: 5px; vertical-align: top;" class="turno-cell" data-turno="noche">
+                            <?php if ($turno_noche && isset($turnos_aula[$turno_noche]['tarjetas'])): ?>
+                                <?php foreach ($turnos_aula[$turno_noche]['tarjetas'] as $tarjeta): ?>
+                                    <div class="mini-tarjeta" style="background: #f8f9fa; border-left: 3px solid #28a745; padding: 5px; margin: 2px 0; border-radius: 3px; font-size: 0.85em;">
+                                        <div style="font-weight: 600;"><?php echo htmlspecialchars($tarjeta['materia_nombre']); ?></div>
+                                        <div style="font-size: 0.8em; color: #666;">
+                                            <?php echo htmlspecialchars($tarjeta['itinerario_nombre']); ?>
+                                            <?php if (!empty($tarjeta['profesor_nombre'])): ?>
+                                                <br>Prof: <?php echo htmlspecialchars($tarjeta['profesor_nombre']); ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <span style="font-weight:600;color:<?php echo $color_noche; ?>;"><?php echo $txt_noche; ?></span>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                 <?php endwhile; ?>
                 </tbody>

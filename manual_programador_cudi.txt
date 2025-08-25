@@ -1,0 +1,112 @@
+Manual del Programador - Sistema CUDI
+1. Visión General
+El Sistema de Gestión de Disposición Aúlica CUDI es una aplicación web diseñada para administrar la asignación de aulas, horarios y recursos educativos en una institución académica.
+
+2. Estructura del Proyecto
+2.1 Directorios Principales
+/bd/: Contiene los scripts SQL de la base de datos
+/css/: Hojas de estilo
+/img/: Imágenes y recursos gráficos
+2.2 Archivos Principales
+disposicionaulica.php
+: Página principal del sistema
+conexion.php
+: Configuración de conexión a la base de datos
+config_timezone.php
+: Configuración de zona horaria
+añadir_aula.php: Gestión de aulas
+gestionar_materias.php
+: Administración de materias
+gestionar_profesores.php
+: Gestión de profesores
+3. Base de Datos
+3.1 Tablas Principales
+aulas
+id_aula: Identificador único
+piso: Número de piso
+cantidad: Capacidad de estudiantes
+numero: Número/identificador del aula
+materias
+id_materia: Identificador único
+nombre: Nombre de la materia
+carrera_id: Referencia a la carrera
+profesor_id: Referencia al profesor
+tarjetas_disposicion
+id_tarjeta: Identificador único
+fecha: Fecha de la clase
+turno_id: Referencia al turno
+itinerario_id: Referencia al horario
+materia_id: Referencia a la materia
+aula_id: Referencia al aula
+profesor_id: Referencia al profesor
+estado: Estado de la tarjeta
+4. Funcionalidades Clave
+4.1 Gestión de Aulas
+Creación y edición de aulas
+Asignación de capacidad y ubicación
+Validación de disponibilidad
+4.2 Asignación de Horarios
+Gestión de turnos (mañana, tarde, noche)
+Configuración de itinerarios horarios
+Validación de conflictos de horarios
+4.3 Gestión de Materias
+Asignación de materias a carreras
+Vinculación con profesores
+Control de cupos
+5. Reglas de Negocio
+5.1 Validación de Conflictos
+Un aula no puede estar asignada a más de una materia en el mismo horario
+Validación de capacidad del aula
+Control de disponibilidad de profesores
+5.2 Flujos de Trabajo
+Creación de aulas con capacidad y ubicación
+Definición de materias y su relación con carreras
+Asignación de profesores a materias
+Creación de horarios e itinerarios
+Asignación de aulas a materias en horarios específicos
+6. API y Puntos de Entrada
+6.1 Endpoints Principales
+get_capacidad_turno.php
+: Obtiene capacidad por turno
+get_itinerarios_por_turno.php
+: Devuelve horarios por turno
+save_item.php
+: Guarda una nueva asignación
+delete_item.php
+: Elimina una asignación
+7. Seguridad
+7.1 Autenticación
+Sistema de login/logout
+Control de sesiones
+Protección contra inyección SQL
+7.2 Validación de Datos
+Sanitización de entradas
+Validación de tipos de datos
+Protección XSS
+8. Mantenimiento
+8.1 Copias de Seguridad
+Scripts SQL para respaldo
+Procedimientos de restauración
+8.2 Monitoreo
+Registro de operaciones
+Control de errores
+9. Consideraciones de Rendimiento
+Índices en claves foráneas
+Consultas optimizadas
+Caché de consultas frecuentes
+10. Personalización
+10.1 Configuración
+Zona horaria en 
+config_timezone.php
+Parámetros de conexión en 
+conexion.php
+10.2 Estilos
+Hojas de estilo personalizables en /css/
+Plantillas para impresión
+11. Soporte
+Para soporte técnico, contactar al equipo de desarrollo con la siguiente información:
+
+Versión del sistema
+Descripción detallada del problema
+Pasos para reproducir el error
+Capturas de pantalla (si aplica)

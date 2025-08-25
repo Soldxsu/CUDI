@@ -1,0 +1,68 @@
+DOCUMENTACIÓN: IMPLEMENTACIÓN DE "TODO EL TURNO"
+
+1. MODIFICACIONES EN LA BASE DE DATOS:
+------------------------------------
+Se agregó un nuevo campo a la tabla 'tarjetas_disposicion' para manejar si una tarjeta ocupa todo el turno:
+
+```sql
+ALTER TABLE tarjetas_disposicion 
+ADD COLUMN ocupa_todo_el_turno TINYINT(1) NOT NULL DEFAULT 0 
+COMMENT '1 si ocupa todo el turno, 0 si no';
+```
+
+2. CAMBIOS EN EL FORMULARIO DE CREACIÓN DE TARJETAS:
+--------------------------------------------------
+- Se agregó un checkbox en el formulario de creación de tarjetas con el texto "Ocupa todo el turno"
+- El campo se envía como 'ocupa_todo_el_turno' en el formulario
+
+3. MODIFICACIONES EN EL BACKEND (PHP):
+------------------------------------
+- Se actualizó la consulta SQL para insertar la tarjeta incluyendo el nuevo campo
+- Se modificó la lógica de validación para verificar disponibilidad cuando una tarjeta ocupa todo el turno
+- Se actualizó la consulta que obtiene las tarjetas para incluir el nuevo campo
+
+4. CAMBIOS EN LA VISUALIZACIÓN:
+-----------------------------
+- Las tarjetas que ocupan todo el turno se muestran con un borde azul
+- Se agregó un indicador visual (texto "Todo el turno") en la tarjeta
+- Se actualizó el modal de detalles para mostrar esta información
+
+5. LÓGICA DE NEGOCIO:
+-------------------
+- Cuando una tarjeta está marcada como "Todo el turno":
+  - Se deshabilitan los demás horarios del mismo turno para esa aula
+  - No se pueden crear otras tarjetas en el mismo turno para esa aula
+  - Se muestra un mensaje claro al usuario sobre esta restricción
+
+6. VALIDACIONES IMPLEMENTADAS:
+---------------------------
+- No se puede crear una tarjeta normal en un turno donde ya existe una tarjeta que ocupa todo el turno
+- No se puede marcar una tarjeta como "Todo el turno" si ya hay otras tarjetas en ese turno
+- Se muestra un mensaje de error claro cuando hay conflictos
+
+7. ARCHIVOS MODIFICADOS:
+----------------------
+- detalle_dia.php (principal lógica)
+- form_disposicion.php (formulario)
+- save_item.php (guardado)
+- detalle_dia.php (visualización)
+
+8. CONSIDERACIONES IMPORTANTES:
+----------------------------
+- Las tarjetas que ocupan todo el turno tienen prioridad sobre las normales
+- Se recomienda que los administradores tengan cuidado al asignar "Todo el turno"
+- Los profesores con esta opción no podrán tener otras asignaciones en el mismo turno
+
+9. POSIBLES MEJORAS FUTURAS:
+--------------------------
+- Permitir excepciones a la regla de "Todo el turno"
+- Notificar a los usuarios cuando se asigne un turno completo
+- Generar reportes de disponibilidad de aulas por turno
+
+10. NOTAS DE IMPLEMENTACIÓN:
+--------------------------
+- Se mantuvo la compatibilidad con las tarjetas existentes
+- Se actualizó la documentación del sistema
+- Se recomienda hacer un backup de la base de datos antes de implementar estos cambios
+
+Este documento fue generado automáticamente el 25/08/2025.
